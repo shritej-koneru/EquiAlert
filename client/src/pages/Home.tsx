@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import TopBar from "@/components/TopBar";
@@ -41,6 +41,8 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState("");
   const [isMarketOpen, setIsMarketOpen] = useState(false);
   const [nextOpenTime, setNextOpenTime] = useState("");
+  
+  const watchlistPriceTracker = useRef(new Map<string, { price: number, lastNotified: number, lastUpdated: number }>());
 
   const { data: profile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ['/api/profile'],
@@ -49,6 +51,7 @@ export default function Home() {
   const { data: watchlistData = [], isLoading: watchlistLoading } = useQuery<any[]>({
     queryKey: ['/api/watchlist'],
     refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 
   const watchlistStocks: WatchlistStock[] = watchlistData.map(item => ({
@@ -179,27 +182,50 @@ export default function Home() {
   useEffect(() => {
     if (!watchlistData.length || !profile?.whatsappNumber) return;
 
-    const previousPrices = new Map<string, number>();
     watchlistData.forEach(item => {
-      previousPrices.set(item.id, item.price);
+      if (!watchlistPriceTracker.current.has(item.id)) {
+        watchlistPriceTracker.current.set(item.id, { 
+          price: item.price, 
+          lastNotified: 0,
+          lastUpdated: Date.now()
+        });
+      }
     });
 
-    const checkPriceChanges = () => {
+    const simulatePriceChanges = () => {
       watchlistData.forEach(item => {
-        const prevPrice = previousPrices.get(item.id);
-        if (prevPrice) {
-          const percentChange = ((item.price - prevPrice) / prevPrice) * 100;
-          
-          if (Math.abs(percentChange) >= 2 && item.hasAlert) {
-            const message = `Stock Alert: ${item.symbol} ${percentChange > 0 ? '📈 increased' : '📉 decreased'} by ${Math.abs(percentChange).toFixed(2)}%`;
-            notifyMutation.mutate({ message, stockSymbol: item.symbol, changePercent: percentChange });
-            previousPrices.set(item.id, item.price);
-          }
+        const tracked = watchlistPriceTracker.current.get(item.id);
+        if (!tracked || !item.hasAlert) return;
+
+        const timeSinceUpdate = Date.now() - tracked.lastUpdated;
+        if (timeSinceUpdate < 30 * 1000) return;
+
+        const currentTrackedPrice = tracked.price;
+        const priceChangeMultiplier = 1 + (Math.random() - 0.5) * 0.06;
+        const newSimulatedPrice = currentTrackedPrice * priceChangeMultiplier;
+        
+        const percentChange = ((newSimulatedPrice - currentTrackedPrice) / currentTrackedPrice) * 100;
+        const timeSinceLastNotification = Date.now() - tracked.lastNotified;
+        
+        watchlistPriceTracker.current.set(item.id, {
+          price: newSimulatedPrice,
+          lastNotified: tracked.lastNotified,
+          lastUpdated: Date.now()
+        });
+        
+        if (Math.abs(percentChange) >= 2 && (tracked.lastNotified === 0 || timeSinceLastNotification > 5 * 60 * 1000)) {
+          const message = `Stock Alert: ${item.symbol} ${percentChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(percentChange).toFixed(2)}%`;
+          notifyMutation.mutate({ message, stockSymbol: item.symbol, changePercent: percentChange });
+          watchlistPriceTracker.current.set(item.id, {
+            price: newSimulatedPrice,
+            lastNotified: Date.now(),
+            lastUpdated: Date.now()
+          });
         }
       });
     };
 
-    const interval = setInterval(checkPriceChanges, 60 * 1000);
+    const interval = setInterval(simulatePriceChanges, 30 * 1000);
     return () => clearInterval(interval);
   }, [watchlistData, profile]);
 
@@ -283,7 +309,7 @@ export default function Home() {
     
     try {
       await notifyMutation.mutateAsync({ 
-        message: `📊 Watchlist Summary:\n${summary}`, 
+        message: `Watchlist Summary:\n${summary}`, 
         stockSymbol: "Watchlist",
         changePercent: 0 
       });

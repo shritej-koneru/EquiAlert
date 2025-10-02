@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
-import twilio from "twilio";
+import { getTwilioClient, getTwilioFromPhoneNumber } from "./twilio";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const DEMO_USER_ID = "demo-user-1";
@@ -145,22 +145,19 @@ ${context ? `Current context: ${context}` : ''}`;
         return res.status(400).json({ message: 'WhatsApp number not configured in profile' });
       }
 
-      const accountSid = process.env.TWILIO_ACCOUNT_SID;
-      const authToken = process.env.TWILIO_AUTH_TOKEN;
-      const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+      const client = await getTwilioClient();
+      const fromNumber = await getTwilioFromPhoneNumber();
 
-      if (!accountSid || !authToken || !fromNumber) {
-        return res.status(500).json({ message: 'Twilio not configured' });
+      if (!fromNumber) {
+        return res.status(500).json({ message: 'Twilio phone number not configured' });
       }
-
-      const client = twilio(accountSid, authToken);
 
       const whatsappNumber = profile.whatsappNumber.startsWith('+') 
         ? profile.whatsappNumber 
         : `+${profile.whatsappNumber}`;
 
       await client.messages.create({
-        body: message || `Stock Alert: ${stockSymbol} ${changePercent > 0 ? '📈' : '📉'} ${changePercent.toFixed(2)}%`,
+        body: message || `Stock Alert: ${stockSymbol} ${changePercent > 0 ? 'increased' : 'decreased'} by ${Math.abs(changePercent).toFixed(2)}%`,
         from: `whatsapp:${fromNumber}`,
         to: `whatsapp:${whatsappNumber}`
       });
