@@ -25,6 +25,7 @@ export const watchlist = pgTable("watchlist", {
   price: real("price").notNull(),
   change: real("change").notNull(),
   changePercent: real("change_percent").notNull(),
+  baselinePrice: real("baseline_price").notNull(),
   hasAlert: boolean("has_alert").notNull().default(false),
   addedAt: timestamp("added_at").notNull().defaultNow(),
 });

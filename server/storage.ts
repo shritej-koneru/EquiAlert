@@ -11,9 +11,11 @@ export interface IStorage {
   updateProfile(userId: string, profile: Partial<InsertProfile>): Promise<Profile | undefined>;
   
   getWatchlist(userId: string): Promise<Watchlist[]>;
+  getAllWatchlistItems(): Promise<Watchlist[]>;
   addToWatchlist(watchlist: InsertWatchlist): Promise<Watchlist>;
   removeFromWatchlist(id: string, userId: string): Promise<boolean>;
   updateWatchlistAlert(id: string, userId: string, hasAlert: boolean): Promise<boolean>;
+  updateWatchlistPrice(id: string, price: number, change: number, changePercent: number): Promise<Watchlist | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -101,6 +103,20 @@ export class MemStorage implements IStorage {
       return true;
     }
     return false;
+  }
+
+  async getAllWatchlistItems(): Promise<Watchlist[]> {
+    return Array.from(this.watchlist.values());
+  }
+
+  async updateWatchlistPrice(id: string, price: number, change: number, changePercent: number): Promise<Watchlist | undefined> {
+    const item = this.watchlist.get(id);
+    if (item) {
+      const updated: Watchlist = { ...item, price, change, changePercent };
+      this.watchlist.set(id, updated);
+      return updated;
+    }
+    return undefined;
   }
 }
 

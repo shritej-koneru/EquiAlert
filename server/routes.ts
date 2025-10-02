@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 import { getTwilioClient, getTwilioFromPhoneNumber } from "./twilio";
+import { priceUpdater } from "./priceUpdater";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const DEMO_USER_ID = "demo-user-1";
@@ -60,6 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price,
         change,
         changePercent,
+        baselinePrice: price,
         hasAlert: false,
       });
       res.json(item);
@@ -104,6 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { message, context } = req.body;
       const apiKey = process.env.XAI_API_KEY;
+      const newsApiKey = process.env.NEWSAPI_KEY;
 
       if (!apiKey) {
         return res.status(500).json({ message: "Grok API key not configured" });
@@ -114,10 +117,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         apiKey: apiKey 
       });
 
-      const systemPrompt = `You are a helpful AI assistant specializing in Indian stock market analysis. 
-You provide concise, accurate insights about stocks, market trends, and investment advice specific to the Indian market (NSE, BSE).
-Keep responses brief and actionable. Focus on: NIFTY 50, SENSEX, banking sector, and popular Indian stocks.
-${context ? `Current context: ${context}` : ''}`;
+      let newsContext = '';
+      if (newsApiKey) {
+        try {
+          const newsParams = new URLSearchParams({
+            apiKey: newsApiKey,
+            pageSize: '5',
+            language: 'en',
+            sortBy: 'publishedAt',
+            q: 'india stock market OR nifty OR sensex OR banking OR reliance OR tcs',
+          });
+          
+          const newsResponse = await fetch(`https://newsapi.org/v2/everything?${newsParams.toString()}`);
+          const newsData = await newsResponse.json();
+          
+          if (newsData.status === 'ok' && newsData.articles) {
+            const recentNews = newsData.articles.slice(0, 3).map((article: any) => 
+              `- ${article.title} (${article.source.name})`
+            ).join('\n');
+            newsContext = `\n\nRecent Market News:\n${recentNews}`;
+          }
+        } catch (newsError) {
+          console.error('News API error (non-blocking):', newsError);
+        }
+      }
+
+      const systemPrompt = `You are a highly knowledgeable AI assistant specializing in Indian stock market analysis. You have expertise in:
+- NSE (National Stock Exchange) and BSE (Bombay Stock Exchange) markets
+- Major indices: NIFTY 50, SENSEX, Bank NIFTY
+- Sector analysis: Banking, IT, Energy, Pharma, Automobile
+- Major Indian companies: Reliance, TCS, Infosys, HDFC Bank, ICICI Bank, etc.
+- Technical analysis, fundamental analysis, and market trends
+- Economic indicators affecting Indian markets
+
+Your responses should be:
+1. Accurate and based on market fundamentals
+2. Concise yet informative (2-4 sentences)
+3. Actionable with specific insights
+4. Grounded in current market context when available
+5. Focused on Indian market specifics (prices in ₹, Indian time zones)
+
+When asked about stock prices or specific companies:
+- Provide context about the sector and market conditions
+- Mention relevant news or events if applicable
+- Offer balanced perspective on risks and opportunities
+
+${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
 
       const response = await openai.chat.completions.create({
         model: "grok-beta",
@@ -125,7 +170,8 @@ ${context ? `Current context: ${context}` : ''}`;
           { role: "system", content: systemPrompt },
           { role: "user", content: message }
         ],
-        max_tokens: 300,
+        max_tokens: 400,
+        temperature: 0.7,
       });
 
       const botMessage = response.choices[0].message.content;
@@ -277,6 +323,8 @@ ${context ? `Current context: ${context}` : ''}`;
   });
 
   const httpServer = createServer(app);
+
+  priceUpdater.start();
 
   return httpServer;
 }
