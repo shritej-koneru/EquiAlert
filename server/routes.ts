@@ -179,9 +179,9 @@ ${context ? `Current context: ${context}` : ''}`;
       }
 
       const categoryMap: Record<string, { category?: string; query?: string; country?: string; endpoint?: string }> = {
-        'India': { category: 'general', country: 'in', endpoint: 'top-headlines' },
+        'India': { query: 'india (stock market OR economy OR business OR finance OR nifty OR sensex)', endpoint: 'everything' },
         'Global': { query: 'stock market OR economy OR finance', endpoint: 'everything' },
-        'Technology': { category: 'technology', country: 'in', endpoint: 'top-headlines' },
+        'Technology': { query: 'india technology OR tech OR IT OR software OR startup', endpoint: 'everything' },
         'Banking': { query: 'india banking OR financial services OR banks', endpoint: 'everything' },
         'Energy': { query: 'india energy OR renewable energy OR oil gas', endpoint: 'everything' },
       };

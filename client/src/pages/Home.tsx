@@ -213,14 +213,17 @@ export default function Home() {
           lastUpdated: Date.now()
         });
         
-        if (Math.abs(percentChange) >= 2 && (tracked.lastNotified === 0 || timeSinceLastNotification > 5 * 60 * 1000)) {
+        if (Math.abs(percentChange) >= 1 && (tracked.lastNotified === 0 || timeSinceLastNotification > 2 * 60 * 1000)) {
           const message = `Stock Alert: ${item.symbol} ${percentChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(percentChange).toFixed(2)}%`;
+          console.log(`Sending WhatsApp alert for ${item.symbol}: ${message}`);
           notifyMutation.mutate({ message, stockSymbol: item.symbol, changePercent: percentChange });
           watchlistPriceTracker.current.set(item.id, {
             price: newSimulatedPrice,
             lastNotified: Date.now(),
             lastUpdated: Date.now()
           });
+        } else {
+          console.log(`Price change for ${item.symbol}: ${percentChange.toFixed(2)}% (threshold: 1%, cooldown: ${Math.floor(timeSinceLastNotification / 1000)}s)`);
         }
       });
     };
