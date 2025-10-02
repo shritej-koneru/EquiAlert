@@ -1,0 +1,136 @@
+Build a full-stack dark-mode stock market web application called EQUIALERT with the following pages and features: it should use data of the Indian  stocks available and give the rate and graph accordingly and it must vary every 5 minutes(increase or decrease) and dont use fixed values...the time must be shown along with market closed or open and the graph and stock values must be accurate 
+Firstly take api keys from me so that it would be more accurate 
+🌑 UI Design Requirements:
+
+Dark background must be dark and professional 
+
+Font: Roboto or SF Pro
+
+Color-coded price indicators:
+
+Green (#00FF7F) for positive change
+
+Red (#FF4C4C) for negative change
+
+Smooth animations for transitions, graphs, and chatbot popups.
+
+🏠 Home Page
+
+Top Bar:
+
+Left: EQUIALERT in bold sans-serif.
+
+Right: Notification bell (opens chatbot alerts) and profile icon (user settings).
+
+Sliding Stock Ticker (horizontal carousel):
+
+Displays: USD/INR rate(88.67 INR), Nifty 50, Sensex, Trending Stocks (Reliance, TCS, Infosys, etc. Only use the current trending stocks and as we are nor using real data...the dummy values must be close to real don't give empty screen)
+
+Show name/logo, current price, % change (color-coded).
+
+Tapping expands to detailed graph view.
+
+Watchlist (scrollable):
+
+User-added stocks: name, ticker, mini chart, current price, % change.
+
+Alert icon for significant movement.
+
+Swipe left to remove, right to set alerts.
+
+Floating Chatbot Icon (bottom right):
+
+On click: shows the current updates or market news from apis 
+
+📰 News Page
+
+Feed of curated financial news:
+
+Headline, source, timestamp, image.
+
+Filters: Global, India, Sector-specific
+
+Search bar for stocks/sectors.
+
+API: Use NewsAPI.org 
+
+📈 Stocks Page
+
+Top search bar to find stocks.
+
+When selected, show:   the graph of that stock in realistic way and use only data you give and give the current stock value
+
+Full-screen chart with 1D, 1W, 1M, 1Y, 5Y views.(1D must show real-time graph and stock price of that day , 1W must show real-time graph and stock price of that of 1 week, 1Y must show real-time graph and stock price of that  1 year.  5 Y must show real-time graph and stock price of 5 years )
+
+Real-time data using 
+News + sentiment + analyst ratings.
+
+Add to watchlist button.
+
+Graph must change color (green/red) based on trend.
+
+Bottom Navigation Bar
+
+Home
+
+ News
+
+📈 Stocks
+
+📲 WhatsApp Integration
+
+Use Twilio WhatsApp API 
+
+Send alerts when:
+
+A watchlist stock moves significantly.
+
+User sets a price alert.
+
+🧠 Chatbot
+
+Use Grok api xai(free tire)
+
+Show alerts like:
+
+The current market situation and company shares news(use grok api and news api)
+
+Use live news snippets as explanation.
+
+Suggest actions (e.g., "Consider reducing exposure.")
+
+🛠 Backend + DB
+
+Node.js + Express.js backend
+
+MongoDB for storing:
+
+Users
+
+Watchlist items
+
+Alert settings
+
+Preferences
+
+
+📁 Deliverables:
+
+Fully responsive React app (dark mode UI)
+
+Backend with Express routes for:
+
+/stocks, /watchlist, /alerts, /news
+
+🛑 Use data only for charts and stock prices. Charts must be accurate and update on interaction.
+
+🔔 Must allow users to:
+They can change their profile and they should add their name, profession, whatsapp number to their profile so that they will be able to get notification to their whatsapp
+And whenever there is a stock change in their watchlisted stock the notification must be send( when the user tires to add stocks show them (Hindustan Unilever (HUL), Nestlé, sun pharma, Bajaj Auto, Maruti Suzuki, HDFC Bank, ICICI Bank, Kotak Mahindra Bank.))
+Add/remove/edit stocks in Watchlist
+
+Set alerts
+
+Receive chatbot insights
+
+View graphs with proper color-coding...red graphs for downfall and green graphs for Increment.
