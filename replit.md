@@ -8,6 +8,16 @@ EQUIALERT is a full-stack, dark-mode stock market web application focused on Ind
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+**October 2, 2025 - AI Chatbot & WhatsApp Integration**
+- Configured Grok XAI API (XAI_API_KEY) for chatbot responses
+- Configured NewsAPI (NEWSAPI_KEY) for market news
+- Set up Twilio connector for WhatsApp messaging
+- Modified `/api/chat` endpoint to automatically send bot responses to user's WhatsApp number
+- WhatsApp notifications are non-blocking (chat continues to work even if notification fails)
+- User can configure WhatsApp number in profile settings
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -103,9 +113,12 @@ Preferred communication style: Simple, everyday language.
 - Market status detection (NSE/BSE trading hours)
 - Currency exchange rates (USD/INR)
 
-**AI Chatbot (Planned)**
-- Grok API integration for market insights and conversational AI
-- WhatsApp Business API for alert notifications
+**AI Chatbot (Implemented)**
+- Grok XAI API integration for market insights and conversational AI
+- API key configured via `XAI_API_KEY` environment variable
+- WhatsApp notifications via Twilio integration
+- Bot responses automatically sent to WhatsApp number from user profile
+- Non-blocking notification delivery (chat works even if WhatsApp fails)
 
 ### Database & Infrastructure
 
