@@ -38,6 +38,7 @@ export default function Home() {
     { symbol: "INFY", name: "Infosys", price: 1823.50, change: 12.30, changePercent: 0.68 },
   ]);
 
+
   const [currentTime, setCurrentTime] = useState("");
   const [isMarketOpen, setIsMarketOpen] = useState(false);
   const [nextOpenTime, setNextOpenTime] = useState("");
@@ -158,9 +159,21 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const updateStockPrices = () => {
+    watchlistData.forEach(item => {
+      if (!watchlistPriceTracker.current.has(item.id)) {
+        watchlistPriceTracker.current.set(item.id, { 
+          price: item.price, 
+          lastNotified: 0,
+          lastUpdated: Date.now()
+        });
+      }
+    });
+
+    const updateAllStockPrices = () => {
       setTickerStocks(prev => prev.map(stock => {
-        const priceChange = (Math.random() - 0.5) * stock.price * 0.02;
+        if (stock.symbol === "USD/INR") return stock;
+        
+        const priceChange = (Math.random() - 0.5) * stock.price * 0.04;
         const newPrice = stock.price + priceChange;
         const newChange = stock.change + priceChange;
         const newChangePercent = (newChange / (newPrice - newChange)) * 100;
@@ -172,39 +185,15 @@ export default function Home() {
           changePercent: newChangePercent,
         };
       }));
-    };
 
-    const randomInterval = Math.floor(Math.random() * (7 - 5 + 1) + 5) * 60 * 1000;
-    const interval = setInterval(updateStockPrices, randomInterval);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (!watchlistData.length || !profile?.whatsappNumber) return;
-
-    watchlistData.forEach(item => {
-      if (!watchlistPriceTracker.current.has(item.id)) {
-        watchlistPriceTracker.current.set(item.id, { 
-          price: item.price, 
-          lastNotified: 0,
-          lastUpdated: Date.now()
-        });
-      }
-    });
-
-    const simulatePriceChanges = () => {
       watchlistData.forEach(item => {
         const tracked = watchlistPriceTracker.current.get(item.id);
-        if (!tracked || !item.hasAlert) return;
+        if (!tracked) return;
 
-        const timeSinceUpdate = Date.now() - tracked.lastUpdated;
-        if (timeSinceUpdate < 30 * 1000) return;
-
-        const currentTrackedPrice = tracked.price;
-        const priceChangeMultiplier = 1 + (Math.random() - 0.5) * 0.06;
-        const newSimulatedPrice = currentTrackedPrice * priceChangeMultiplier;
+        const priceChangeMultiplier = 1 + (Math.random() - 0.5) * 0.04;
+        const newSimulatedPrice = tracked.price * priceChangeMultiplier;
         
-        const percentChange = ((newSimulatedPrice - currentTrackedPrice) / currentTrackedPrice) * 100;
+        const percentChange = ((newSimulatedPrice - tracked.price) / tracked.price) * 100;
         const timeSinceLastNotification = Date.now() - tracked.lastNotified;
         
         watchlistPriceTracker.current.set(item.id, {
@@ -213,8 +202,8 @@ export default function Home() {
           lastUpdated: Date.now()
         });
         
-        if (Math.abs(percentChange) >= 1 && (tracked.lastNotified === 0 || timeSinceLastNotification > 2 * 60 * 1000)) {
-          const message = `Stock Alert: ${item.symbol} ${percentChange > 0 ? 'increased' : 'decreased'} by ${Math.abs(percentChange).toFixed(2)}%`;
+        if (item.hasAlert && profile?.whatsappNumber && Math.abs(percentChange) >= 1 && (tracked.lastNotified === 0 || timeSinceLastNotification > 2 * 60 * 1000)) {
+          const message = `🔔 Stock Alert: ${item.symbol} ${percentChange > 0 ? '📈 increased' : '📉 decreased'} by ${Math.abs(percentChange).toFixed(2)}%\nCurrent Price: ₹${newSimulatedPrice.toFixed(2)}`;
           console.log(`Sending WhatsApp alert for ${item.symbol}: ${message}`);
           notifyMutation.mutate({ message, stockSymbol: item.symbol, changePercent: percentChange });
           watchlistPriceTracker.current.set(item.id, {
@@ -222,13 +211,12 @@ export default function Home() {
             lastNotified: Date.now(),
             lastUpdated: Date.now()
           });
-        } else {
-          console.log(`Price change for ${item.symbol}: ${percentChange.toFixed(2)}% (threshold: 1%, cooldown: ${Math.floor(timeSinceLastNotification / 1000)}s)`);
         }
       });
     };
 
-    const interval = setInterval(simulatePriceChanges, 30 * 1000);
+    const randomInterval = Math.floor(Math.random() * (10 - 5 + 1) + 5) * 60 * 1000;
+    const interval = setInterval(updateAllStockPrices, randomInterval);
     return () => clearInterval(interval);
   }, [watchlistData, profile]);
 
@@ -329,10 +317,7 @@ export default function Home() {
     }
   };
 
-  const generateChartData = (): ChartDataPoint[] => {
-    const stock = tickerStocks.find(s => s.symbol === selectedStock);
-    if (!stock) return [];
-    
+  const generateChartData = (stock: StockTickerItem): ChartDataPoint[] => {
     const basePrice = stock.price;
     const points = selectedRange === "1D" ? 24 : selectedRange === "1W" ? 7 : selectedRange === "1M" ? 30 : selectedRange === "1Y" ? 12 : 60;
     return Array.from({ length: points }, (_, i) => ({
@@ -348,7 +333,21 @@ export default function Home() {
   }
 
   if (selectedStock) {
-    const stock = tickerStocks.find(s => s.symbol === selectedStock);
+    let stock = tickerStocks.find(s => s.symbol === selectedStock);
+    
+    if (!stock) {
+      const watchlistItem = watchlistData.find(w => w.symbol === selectedStock);
+      if (watchlistItem) {
+        stock = {
+          symbol: watchlistItem.symbol,
+          name: watchlistItem.name,
+          price: watchlistItem.price,
+          change: watchlistItem.change,
+          changePercent: watchlistItem.changePercent
+        };
+      }
+    }
+    
     if (!stock) return null;
 
     return (
@@ -359,7 +358,7 @@ export default function Home() {
           currentPrice={stock.price}
           change={stock.change}
           changePercent={stock.changePercent}
-          data={generateChartData()}
+          data={generateChartData(stock)}
           selectedRange={selectedRange}
           onRangeChange={setSelectedRange}
           onClose={() => setSelectedStock(null)}
