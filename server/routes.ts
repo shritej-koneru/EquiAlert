@@ -129,6 +129,29 @@ ${context ? `Current context: ${context}` : ''}`;
       });
 
       const botMessage = response.choices[0].message.content;
+
+      const profile = await storage.getProfile(DEMO_USER_ID);
+      if (profile && profile.whatsappNumber) {
+        try {
+          const client = await getTwilioClient();
+          const fromNumber = await getTwilioFromPhoneNumber();
+
+          if (fromNumber) {
+            const whatsappNumber = profile.whatsappNumber.startsWith('+') 
+              ? profile.whatsappNumber 
+              : `+${profile.whatsappNumber}`;
+
+            await client.messages.create({
+              body: `🤖 Market Assistant: ${botMessage}`,
+              from: `whatsapp:${fromNumber}`,
+              to: `whatsapp:${whatsappNumber}`
+            });
+          }
+        } catch (whatsappError) {
+          console.error('WhatsApp notification error (non-blocking):', whatsappError);
+        }
+      }
+
       res.json({ message: botMessage });
     } catch (error) {
       console.error('Grok API error:', error);
