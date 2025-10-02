@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import NewsCard, { NewsItem } from "@/components/NewsCard";
@@ -9,6 +10,7 @@ import ChatbotPanel, { ChatMessage } from "@/components/ChatbotPanel";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function News() {
   const [selectedCategory, setSelectedCategory] = useState<NewsCategory>("All");
@@ -16,51 +18,17 @@ export default function News() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   
-  // todo: remove mock functionality - Replace with real user profile from backend
   const [profile, setProfile] = useState<UserProfile>({
     name: "",
     profession: "",
     whatsappNumber: "",
   });
 
-  // todo: remove mock functionality - Replace with NewsAPI.org data
-  const newsItems: NewsItem[] = [
-    {
-      id: "1",
-      title: "Indian Stock Markets Hit All-Time High on Strong GDP Growth",
-      source: "Economic Times",
-      timestamp: "2 hours ago",
-      description: "Nifty 50 and Sensex reached record levels amid positive economic indicators and strong corporate earnings.",
-    },
-    {
-      id: "2",
-      title: "HDFC Bank Reports 20% Growth in Q4 Profits",
-      source: "Business Standard",
-      timestamp: "3 hours ago",
-      description: "HDFC Bank's quarterly results exceeded analyst expectations with strong loan growth and reduced NPA levels.",
-    },
-    {
-      id: "3",
-      title: "Reliance Industries Announces Major Investment in Green Energy",
-      source: "NDTV Profit",
-      timestamp: "5 hours ago",
-      description: "Mukesh Ambani-led Reliance Industries plans to invest $10 billion in renewable energy projects over the next three years.",
-    },
-    {
-      id: "4",
-      title: "IT Sector Shows Recovery with TCS and Infosys Gaining Ground",
-      source: "Mint",
-      timestamp: "6 hours ago",
-      description: "Technology stocks rebounded as global demand for IT services improved in the latest quarter.",
-    },
-    {
-      id: "5",
-      title: "RBI Maintains Interest Rates Amid Inflation Concerns",
-      source: "The Hindu BusinessLine",
-      timestamp: "1 day ago",
-      description: "Reserve Bank of India kept repo rate unchanged at 6.5% in its latest monetary policy review.",
-    },
-  ];
+  const { data: newsData, isLoading, isError, error } = useQuery<{ articles: NewsItem[] }>({
+    queryKey: ['/api/news', { category: selectedCategory !== "All" ? selectedCategory : undefined, q: searchQuery.trim() || undefined }],
+  });
+
+  const newsItems = newsData?.articles || [];
 
   // todo: remove mock functionality - Replace with real chat messages from Grok API
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -93,20 +61,12 @@ export default function News() {
     }, 1000);
   };
 
-  const filteredNews = newsItems.filter(news => {
-    const matchesCategory = selectedCategory === "All" || 
-      (selectedCategory === "Banking" && (news.title.includes("Bank") || news.title.includes("RBI"))) ||
-      (selectedCategory === "Technology" && (news.title.includes("IT") || news.title.includes("TCS") || news.title.includes("Infosys"))) ||
-      (selectedCategory === "Energy" && news.title.includes("Energy")) ||
-      (selectedCategory === "India" && true) ||
-      (selectedCategory === "Global" && false);
-    
-    const matchesSearch = searchQuery === "" || 
-      news.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      news.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    return matchesCategory && matchesSearch;
-  });
+  const handleNewsClick = (id: string) => {
+    const article = newsItems.find(n => n.id === id);
+    if (article && 'url' in article) {
+      window.open(article.url as string, '_blank');
+    }
+  };
 
   return (
     <div className="min-h-screen pb-16 pt-16">
@@ -136,16 +96,31 @@ export default function News() {
         </div>
 
         <div className="space-y-4">
-          {filteredNews.length === 0 ? (
+          {isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="p-4 rounded-lg border bg-card">
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-1/3" />
+              </div>
+            ))
+          ) : isError ? (
+            <div className="text-center py-12">
+              <p className="text-destructive font-semibold mb-2">Failed to load news</p>
+              <p className="text-muted-foreground text-sm">
+                {error instanceof Error ? error.message : 'An error occurred while fetching news'}
+              </p>
+            </div>
+          ) : newsItems.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No news found</p>
             </div>
           ) : (
-            filteredNews.map((news) => (
+            newsItems.map((news) => (
               <NewsCard 
                 key={news.id} 
                 news={news} 
-                onClick={(id) => console.log('News clicked:', id)}
+                onClick={handleNewsClick}
               />
             ))
           )}
