@@ -1,8 +1,177 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import OpenAI from "openai";
+import twilio from "twilio";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const DEMO_USER_ID = "demo-user-1";
+
+  app.get("/api/profile", async (req, res) => {
+    try {
+      const profile = await storage.getProfile(DEMO_USER_ID);
+      if (profile) {
+        res.json(profile);
+      } else {
+        res.json({ userId: DEMO_USER_ID, name: "", profession: "", whatsappNumber: "" });
+      }
+    } catch (error) {
+      console.error('Profile fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch profile' });
+    }
+  });
+
+  app.post("/api/profile", async (req, res) => {
+    try {
+      const { name, profession, whatsappNumber } = req.body;
+      const existing = await storage.getProfile(DEMO_USER_ID);
+      
+      let profile;
+      if (existing) {
+        profile = await storage.updateProfile(DEMO_USER_ID, { name, profession, whatsappNumber });
+      } else {
+        profile = await storage.createProfile({ userId: DEMO_USER_ID, name, profession, whatsappNumber });
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      console.error('Profile save error:', error);
+      res.status(500).json({ message: 'Failed to save profile' });
+    }
+  });
+
+  app.get("/api/watchlist", async (req, res) => {
+    try {
+      const watchlist = await storage.getWatchlist(DEMO_USER_ID);
+      res.json(watchlist);
+    } catch (error) {
+      console.error('Watchlist fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch watchlist' });
+    }
+  });
+
+  app.post("/api/watchlist", async (req, res) => {
+    try {
+      const { symbol, name, price, change, changePercent } = req.body;
+      const item = await storage.addToWatchlist({
+        userId: DEMO_USER_ID,
+        symbol,
+        name,
+        price,
+        change,
+        changePercent,
+        hasAlert: false,
+      });
+      res.json(item);
+    } catch (error) {
+      console.error('Add to watchlist error:', error);
+      res.status(500).json({ message: 'Failed to add to watchlist' });
+    }
+  });
+
+  app.delete("/api/watchlist/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.removeFromWatchlist(id, DEMO_USER_ID);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ message: 'Watchlist item not found' });
+      }
+    } catch (error) {
+      console.error('Remove from watchlist error:', error);
+      res.status(500).json({ message: 'Failed to remove from watchlist' });
+    }
+  });
+
+  app.patch("/api/watchlist/:id/alert", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { hasAlert } = req.body;
+      const success = await storage.updateWatchlistAlert(id, DEMO_USER_ID, hasAlert);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ message: 'Watchlist item not found' });
+      }
+    } catch (error) {
+      console.error('Update alert error:', error);
+      res.status(500).json({ message: 'Failed to update alert' });
+    }
+  });
+
+  app.post("/api/chat", async (req, res) => {
+    try {
+      const { message, context } = req.body;
+      const apiKey = process.env.XAI_API_KEY;
+
+      if (!apiKey) {
+        return res.status(500).json({ message: "Grok API key not configured" });
+      }
+
+      const openai = new OpenAI({ 
+        baseURL: "https://api.x.ai/v1", 
+        apiKey: apiKey 
+      });
+
+      const systemPrompt = `You are a helpful AI assistant specializing in Indian stock market analysis. 
+You provide concise, accurate insights about stocks, market trends, and investment advice specific to the Indian market (NSE, BSE).
+Keep responses brief and actionable. Focus on: NIFTY 50, SENSEX, banking sector, and popular Indian stocks.
+${context ? `Current context: ${context}` : ''}`;
+
+      const response = await openai.chat.completions.create({
+        model: "grok-beta",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: message }
+        ],
+        max_tokens: 300,
+      });
+
+      const botMessage = response.choices[0].message.content;
+      res.json({ message: botMessage });
+    } catch (error) {
+      console.error('Grok API error:', error);
+      res.status(500).json({ message: 'Failed to get response from Grok AI' });
+    }
+  });
+
+  app.post("/api/notify", async (req, res) => {
+    try {
+      const { message, stockSymbol, changePercent } = req.body;
+      
+      const profile = await storage.getProfile(DEMO_USER_ID);
+      if (!profile || !profile.whatsappNumber) {
+        return res.status(400).json({ message: 'WhatsApp number not configured in profile' });
+      }
+
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+
+      if (!accountSid || !authToken || !fromNumber) {
+        return res.status(500).json({ message: 'Twilio not configured' });
+      }
+
+      const client = twilio(accountSid, authToken);
+
+      const whatsappNumber = profile.whatsappNumber.startsWith('+') 
+        ? profile.whatsappNumber 
+        : `+${profile.whatsappNumber}`;
+
+      await client.messages.create({
+        body: message || `Stock Alert: ${stockSymbol} ${changePercent > 0 ? '📈' : '📉'} ${changePercent.toFixed(2)}%`,
+        from: `whatsapp:${fromNumber}`,
+        to: `whatsapp:${whatsappNumber}`
+      });
+
+      res.json({ success: true, message: 'Notification sent' });
+    } catch (error) {
+      console.error('WhatsApp notification error:', error);
+      res.status(500).json({ message: 'Failed to send notification' });
+    }
+  });
+
   app.get("/api/news", async (req, res) => {
     try {
       const { category, q } = req.query;

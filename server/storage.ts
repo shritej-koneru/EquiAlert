@@ -1,20 +1,30 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { type User, type InsertUser, type Profile, type InsertProfile, type Watchlist, type InsertWatchlist } from "@shared/schema";
 import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  getProfile(userId: string): Promise<Profile | undefined>;
+  createProfile(profile: InsertProfile): Promise<Profile>;
+  updateProfile(userId: string, profile: Partial<InsertProfile>): Promise<Profile | undefined>;
+  
+  getWatchlist(userId: string): Promise<Watchlist[]>;
+  addToWatchlist(watchlist: InsertWatchlist): Promise<Watchlist>;
+  removeFromWatchlist(id: string, userId: string): Promise<boolean>;
+  updateWatchlistAlert(id: string, userId: string, hasAlert: boolean): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private profiles: Map<string, Profile>;
+  private watchlist: Map<string, Watchlist>;
 
   constructor() {
     this.users = new Map();
+    this.profiles = new Map();
+    this.watchlist = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -32,6 +42,65 @@ export class MemStorage implements IStorage {
     const user: User = { ...insertUser, id };
     this.users.set(id, user);
     return user;
+  }
+
+  async getProfile(userId: string): Promise<Profile | undefined> {
+    return Array.from(this.profiles.values()).find(
+      (profile) => profile.userId === userId,
+    );
+  }
+
+  async createProfile(insertProfile: InsertProfile): Promise<Profile> {
+    const id = randomUUID();
+    const profile: Profile = { ...insertProfile, id };
+    this.profiles.set(id, profile);
+    return profile;
+  }
+
+  async updateProfile(userId: string, profileData: Partial<InsertProfile>): Promise<Profile | undefined> {
+    const existing = await this.getProfile(userId);
+    if (existing) {
+      const updated: Profile = { ...existing, ...profileData };
+      this.profiles.set(existing.id, updated);
+      return updated;
+    }
+    return undefined;
+  }
+
+  async getWatchlist(userId: string): Promise<Watchlist[]> {
+    return Array.from(this.watchlist.values()).filter(
+      (item) => item.userId === userId,
+    );
+  }
+
+  async addToWatchlist(insertWatchlist: InsertWatchlist): Promise<Watchlist> {
+    const id = randomUUID();
+    const item: Watchlist = { 
+      ...insertWatchlist,
+      hasAlert: insertWatchlist.hasAlert ?? false,
+      id,
+      addedAt: new Date(),
+    };
+    this.watchlist.set(id, item);
+    return item;
+  }
+
+  async removeFromWatchlist(id: string, userId: string): Promise<boolean> {
+    const item = this.watchlist.get(id);
+    if (item && item.userId === userId) {
+      return this.watchlist.delete(id);
+    }
+    return false;
+  }
+
+  async updateWatchlistAlert(id: string, userId: string, hasAlert: boolean): Promise<boolean> {
+    const item = this.watchlist.get(id);
+    if (item && item.userId === userId) {
+      item.hasAlert = hasAlert;
+      this.watchlist.set(id, item);
+      return true;
+    }
+    return false;
   }
 }
 

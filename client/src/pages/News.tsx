@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import NewsCard, { NewsItem } from "@/components/NewsCard";
@@ -11,6 +12,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 export default function News() {
   const [selectedCategory, setSelectedCategory] = useState<NewsCategory>("All");
@@ -18,10 +20,10 @@ export default function News() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   
-  const [profile, setProfile] = useState<UserProfile>({
-    name: "",
-    profession: "",
-    whatsappNumber: "",
+  const { toast } = useToast();
+
+  const { data: profile, isLoading: profileLoading } = useQuery<UserProfile>({
+    queryKey: ['/api/profile'],
   });
 
   const { data: newsData, isLoading, isError, error } = useQuery<{ articles: NewsItem[] }>({
@@ -30,35 +32,73 @@ export default function News() {
 
   const newsItems = newsData?.articles || [];
 
-  // todo: remove mock functionality - Replace with real chat messages from Grok API
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       content: "I can help you understand market news and sentiment. Ask me anything!",
       isBot: true,
-      timestamp: "10:30 AM",
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
 
-  const handleSendMessage = (message: string) => {
+  const saveProfileMutation = useMutation({
+    mutationFn: async (profileData: UserProfile) => {
+      const res = await apiRequest('POST', '/api/profile', profileData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+      toast({
+        title: "Profile saved",
+        description: "Your profile has been updated successfully.",
+      });
+    },
+  });
+
+  const chatMutation = useMutation({
+    mutationFn: async ({ message, context }: { message: string; context?: string }) => {
+      const res = await apiRequest('POST', '/api/chat', { message, context });
+      return res.json();
+    },
+  });
+
+  const handleSendMessage = async (message: string) => {
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
       content: message,
       isBot: false,
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
     };
-    setChatMessages([...chatMessages, newMessage]);
+    setChatMessages(prev => [...prev, newMessage]);
     
-    // todo: remove mock functionality - Send to Grok API for real response
-    setTimeout(() => {
+    const newsContext = newsItems.slice(0, 3).map(n => n.title).join('; ');
+    
+    try {
+      const response = await chatMutation.mutateAsync({ 
+        message, 
+        context: `Recent news headlines: ${newsContext}` 
+      });
+      
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: "Based on recent news, the banking sector is showing strong performance with HDFC Bank leading the gains.",
+        content: response.message,
         isBot: true,
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
       };
       setChatMessages(prev => [...prev, botMessage]);
-    }, 1000);
+    } catch (error) {
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: "Sorry, I'm having trouble connecting right now. Please try again.",
+        isBot: true,
+        timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    }
+  };
+
+  const handleSaveProfile = (profileData: UserProfile) => {
+    saveProfileMutation.mutate(profileData);
   };
 
   const handleNewsClick = (id: string) => {
@@ -138,8 +178,8 @@ export default function News() {
       <ProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        profile={profile}
-        onSave={setProfile}
+        profile={profile || { name: "", profession: "", whatsappNumber: "" }}
+        onSave={handleSaveProfile}
       />
     </div>
   );

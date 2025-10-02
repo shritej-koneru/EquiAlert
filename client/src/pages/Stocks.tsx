@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import StockSearch, { SearchResult } from "@/components/StockSearch";
@@ -8,7 +10,8 @@ import ChatbotButton from "@/components/ChatbotButton";
 import ChatbotPanel, { ChatMessage } from "@/components/ChatbotPanel";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Stocks() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -16,15 +19,26 @@ export default function Stocks() {
   const [selectedRange, setSelectedRange] = useState<TimeRange>("1D");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  
-  // todo: remove mock functionality - Replace with real user profile from backend
-  const [profile, setProfile] = useState<UserProfile>({
-    name: "",
-    profession: "",
-    whatsappNumber: "",
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: "1",
+      content: "I can provide insights about stocks and market trends. What would you like to know?",
+      isBot: true,
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+    },
+  ]);
+  const { toast } = useToast();
+
+  const { data: profile, isLoading: profileLoading } = useQuery<UserProfile>({
+    queryKey: ['/api/profile'],
   });
 
-  // todo: remove mock functionality - Replace with real stock data from API
+  const { data: watchlistData = [] } = useQuery<any[]>({
+    queryKey: ['/api/watchlist'],
+  });
+
+  const watchlistSymbols = new Set(watchlistData.map(item => item.symbol));
+
   const availableStocks: SearchResult[] = [
     { symbol: "HDFCBANK", name: "HDFC Bank", price: 1685.40, changePercent: 1.42 },
     { symbol: "ICICIBANK", name: "ICICI Bank", price: 1145.75, changePercent: -0.35 },
@@ -43,38 +57,85 @@ export default function Stocks() {
         stock.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
-  // todo: remove mock functionality - Replace with real chat messages from Grok API
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: "1",
-      content: "I can provide insights about stocks and market trends. What would you like to know?",
-      isBot: true,
-      timestamp: "10:30 AM",
+  const addToWatchlistMutation = useMutation({
+    mutationFn: async (stock: SearchResult) => {
+      const change = (stock.price * stock.changePercent) / 100;
+      const res = await apiRequest('POST', '/api/watchlist', {
+        symbol: stock.symbol,
+        name: stock.name,
+        price: stock.price,
+        change: change,
+        changePercent: stock.changePercent,
+      });
+      return res.json();
     },
-  ]);
+    onSuccess: (data, stock) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/watchlist'] });
+      toast({
+        title: "Added to watchlist",
+        description: `${stock.symbol} has been added to your watchlist.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to add",
+        description: "Could not add stock to watchlist. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
-  const handleSendMessage = (message: string) => {
+  const saveProfileMutation = useMutation({
+    mutationFn: async (profileData: UserProfile) => {
+      const res = await apiRequest('POST', '/api/profile', profileData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+      toast({
+        title: "Profile saved",
+        description: "Your profile has been updated successfully.",
+      });
+    },
+  });
+
+  const chatMutation = useMutation({
+    mutationFn: async ({ message, context }: { message: string; context?: string }) => {
+      const res = await apiRequest('POST', '/api/chat', { message, context });
+      return res.json();
+    },
+  });
+
+  const handleSendMessage = async (message: string) => {
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
       content: message,
       isBot: false,
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
     };
-    setChatMessages([...chatMessages, newMessage]);
+    setChatMessages(prev => [...prev, newMessage]);
     
-    // todo: remove mock functionality - Send to Grok API for real response
-    setTimeout(() => {
+    try {
+      const response = await chatMutation.mutateAsync({ message });
+      
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: "HDFC Bank is showing strong technical indicators with good volume support. Consider this as a potential buy opportunity.",
+        content: response.message,
         isBot: true,
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
       };
       setChatMessages(prev => [...prev, botMessage]);
-    }, 1000);
+    } catch (error) {
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: "Sorry, I'm having trouble connecting right now. Please try again.",
+        isBot: true,
+        timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    }
   };
 
-  // todo: remove mock functionality - Generate real chart data based on selected range
   const generateChartData = (): ChartDataPoint[] => {
     if (!selectedStock) return [];
     const basePrice = selectedStock.price;
@@ -83,6 +144,22 @@ export default function Stocks() {
       time: selectedRange === "1D" ? `${i}:00` : selectedRange === "1W" ? `Day ${i + 1}` : selectedRange === "1M" ? `Day ${i + 1}` : selectedRange === "1Y" ? `Month ${i + 1}` : `Year ${i + 1}`,
       value: basePrice + (Math.random() * basePrice * 0.1 - basePrice * 0.05),
     }));
+  };
+
+  const handleAddToWatchlist = (stock: SearchResult, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (watchlistSymbols.has(stock.symbol)) {
+      toast({
+        title: "Already in watchlist",
+        description: `${stock.symbol} is already in your watchlist.`,
+      });
+      return;
+    }
+    addToWatchlistMutation.mutate(stock);
+  };
+
+  const handleSaveProfile = (profileData: UserProfile) => {
+    saveProfileMutation.mutate(profileData);
   };
 
   if (selectedStock) {
@@ -126,6 +203,8 @@ export default function Stocks() {
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {availableStocks.map((stock) => {
               const isPositive = stock.changePercent >= 0;
+              const inWatchlist = watchlistSymbols.has(stock.symbol);
+              
               return (
                 <Card
                   key={stock.symbol}
@@ -140,15 +219,13 @@ export default function Stocks() {
                     </div>
                     <Button
                       size="icon"
-                      variant="ghost"
+                      variant={inWatchlist ? "default" : "ghost"}
                       className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('Add to watchlist:', stock.symbol);
-                      }}
+                      onClick={(e) => handleAddToWatchlist(stock, e)}
                       data-testid={`button-add-${stock.symbol}`}
+                      disabled={addToWatchlistMutation.isPending}
                     >
-                      <Plus className="w-4 h-4" />
+                      {inWatchlist ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                     </Button>
                   </div>
                   <div>
@@ -177,8 +254,8 @@ export default function Stocks() {
       <ProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        profile={profile}
-        onSave={setProfile}
+        profile={profile || { name: "", profession: "", whatsappNumber: "" }}
+        onSave={handleSaveProfile}
       />
     </div>
   );
