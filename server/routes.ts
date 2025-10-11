@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import OpenAI from "openai";
 import { getTwilioClient, getTwilioFromPhoneNumber } from "./twilio";
 import { priceUpdater } from "./priceUpdater";
+import { notificationScheduler } from "./scheduler";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const DEMO_USER_ID = "demo-user-1";
@@ -105,15 +106,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/chat", async (req, res) => {
     try {
       const { message, context } = req.body;
-      const apiKey = process.env.XAI_API_KEY;
+      const apiKey = process.env.GROQ_API_KEY;
       const newsApiKey = process.env.NEWSAPI_KEY;
 
       if (!apiKey) {
-        return res.status(500).json({ message: "Grok API key not configured" });
+        return res.status(500).json({ message: "Groq API key not configured" });
       }
 
       const openai = new OpenAI({ 
-        baseURL: "https://api.x.ai/v1", 
+        baseURL: "https://api.groq.com/openai/v1", 
         apiKey: apiKey 
       });
 
@@ -165,7 +166,7 @@ When asked about stock prices or specific companies:
 ${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
 
       const response = await openai.chat.completions.create({
-        model: "grok-beta",
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: message }
@@ -200,8 +201,8 @@ ${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
 
       res.json({ message: botMessage });
     } catch (error) {
-      console.error('Grok API error:', error);
-      res.status(500).json({ message: 'Failed to get response from Grok AI' });
+      console.error('Groq API error:', error);
+      res.status(500).json({ message: 'Failed to get response from Groq AI' });
     }
   });
 
@@ -325,6 +326,7 @@ ${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
   const httpServer = createServer(app);
 
   priceUpdater.start();
+  notificationScheduler.start();
 
   return httpServer;
 }

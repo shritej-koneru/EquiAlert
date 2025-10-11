@@ -10,13 +10,24 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+**October 11, 2025 - Groq API Integration & Scheduled Notifications**
+- Replaced Grok XAI API with Groq API (GROQ_API_KEY) for faster chatbot responses using Llama 3.3 70B model
+- Implemented scheduled WhatsApp notifications for stock market updates:
+  - 9:15 AM: Market opening message
+  - 10:30 AM: Reliance stock update
+  - 11:24 AM: Infosys stock update
+  - 12:45 PM: TCS stock update
+  - 2:43 PM: Reliance stock update
+  - 3:12 PM: ICICI Bank stock update
+  - 3:30 PM: Market closing message
+- WhatsApp notifications now use environment variable (WHATSAPP_NUMBER) for simplified setup
+- Added default stocks initialization (Reliance, Infosys, TCS, ICICI Bank) for immediate functionality
+
 **October 2, 2025 - AI Chatbot & WhatsApp Integration**
-- Configured Grok XAI API (XAI_API_KEY) for chatbot responses
 - Configured NewsAPI (NEWSAPI_KEY) for market news
 - Set up Twilio connector for WhatsApp messaging
 - Modified `/api/chat` endpoint to automatically send bot responses to user's WhatsApp number
 - WhatsApp notifications are non-blocking (chat continues to work even if notification fails)
-- User can configure WhatsApp number in profile settings
 
 ## System Architecture
 
@@ -114,10 +125,12 @@ Preferred communication style: Simple, everyday language.
 - Currency exchange rates (USD/INR)
 
 **AI Chatbot (Implemented)**
-- Grok XAI API integration for market insights and conversational AI
-- API key configured via `XAI_API_KEY` environment variable
-- WhatsApp notifications via Twilio integration
-- Bot responses automatically sent to WhatsApp number from user profile
+- Groq API integration using Llama 3.3 70B model for market insights and conversational AI
+- API key configured via `GROQ_API_KEY` environment variable
+- WhatsApp scheduled notifications via Twilio integration at specific times:
+  - Daily market opening/closing alerts
+  - Periodic stock updates for tracked companies
+- Notifications sent to single number configured in `WHATSAPP_NUMBER` environment variable
 - Non-blocking notification delivery (chat works even if WhatsApp fails)
 
 ### Database & Infrastructure
