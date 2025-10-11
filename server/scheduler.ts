@@ -63,10 +63,11 @@ class NotificationScheduler {
 
   private async sendNotification(notification: ScheduledNotification) {
     try {
-      const whatsappNumber = process.env.WHATSAPP_NUMBER;
+      const DEMO_USER_ID = "demo-user-1";
+      const profile = await storage.getProfile(DEMO_USER_ID);
       
-      if (!whatsappNumber) {
-        console.error('WhatsApp number not configured');
+      if (!profile || !profile.whatsappNumber) {
+        console.error('WhatsApp number not configured in profile');
         return;
       }
 
@@ -90,9 +91,9 @@ class NotificationScheduler {
         const fromNumber = await getTwilioFromPhoneNumber();
 
         if (fromNumber) {
-          const formattedWhatsappNumber = whatsappNumber.startsWith('+') 
-            ? whatsappNumber 
-            : `+${whatsappNumber}`;
+          const formattedWhatsappNumber = profile.whatsappNumber.startsWith('+') 
+            ? profile.whatsappNumber 
+            : `+${profile.whatsappNumber}`;
 
           await client.messages.create({
             body: message,
