@@ -37,6 +37,9 @@ export class MemStorage implements IStorage {
       { symbol: 'INFY', name: 'Infosys Ltd', price: 1920.75 },
       { symbol: 'TCS', name: 'Tata Consultancy Services', price: 4150.25 },
       { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.60 },
+      { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical', price: 1750.80 },
+      { symbol: 'MARUTI', name: 'Maruti Suzuki India', price: 12450.25 },
+      { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1680.90 },
     ];
 
     defaultStocks.forEach(stock => {

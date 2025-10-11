@@ -10,14 +10,13 @@ interface ScheduledNotification {
 
 const SCHEDULED_NOTIFICATIONS: ScheduledNotification[] = [
   { time: '09:15', type: 'market_open', message: '📈 Stock Market is now OPEN! NSE/BSE trading begins.' },
-  { time: '10:30', type: 'stock_update', stockSymbol: 'RELIANCE' },
-  { time: '11:24', type: 'stock_update', stockSymbol: 'INFY' },
-  { time: '12:45', type: 'stock_update', stockSymbol: 'TCS' },
-  { time: '14:43', type: 'stock_update', stockSymbol: 'RELIANCE' },
-  { time: '15:12', type: 'stock_update', stockSymbol: 'ICICIBANK' },
-  { time: '15:30', type: 'market_close', message: '📉 Stock Market is now CLOSED. Trading ends for today.' },
-  { time: '18:36', type: 'market_close', message: '🌙 Stock Market is closed. It will reopen tomorrow morning at 9:15 AM.' },
-  { time: '18:48', type: 'market_close', message: '✅ Test notification: WhatsApp integration is working successfully!' }
+  { time: '10:00', type: 'stock_update', stockSymbol: 'RELIANCE' },
+  { time: '11:12', type: 'stock_update', stockSymbol: 'INFY' },
+  { time: '12:31', type: 'stock_update', stockSymbol: 'SUNPHARMA' },
+  { time: '13:15', type: 'stock_update', stockSymbol: 'TCS' },
+  { time: '14:43', type: 'stock_update', stockSymbol: 'MARUTI' },
+  { time: '14:50', type: 'stock_update', stockSymbol: 'HDFCBANK' },
+  { time: '15:30', type: 'market_close', message: '📉 Stock Market is now CLOSED. Trading ends for today.' }
 ];
 
 class NotificationScheduler {
