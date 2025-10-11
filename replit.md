@@ -20,6 +20,7 @@ Preferred communication style: Simple, everyday language.
   - 2:43 PM: Reliance stock update
   - 3:12 PM: ICICI Bank stock update
   - 3:30 PM: Market closing message
+  - 6:36 PM: Evening reminder that market is closed and will reopen tomorrow at 9:15 AM
 - WhatsApp notifications now use environment variable (WHATSAPP_NUMBER) for simplified setup
 - Added default stocks initialization (Reliance, Infosys, TCS, ICICI Bank) for immediate functionality
 
