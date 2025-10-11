@@ -190,8 +190,8 @@ ${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
 
             await client.messages.create({
               body: `🤖 Market Assistant: ${botMessage}`,
-              from: `whatsapp:${fromNumber}`,
-              to: `whatsapp:${whatsappNumber}`
+              from: fromNumber,
+              to: whatsappNumber
             });
           }
         } catch (whatsappError) {
@@ -228,8 +228,8 @@ ${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
 
       await client.messages.create({
         body: message || `Stock Alert: ${stockSymbol} ${changePercent > 0 ? 'increased' : 'decreased'} by ${Math.abs(changePercent).toFixed(2)}%`,
-        from: `whatsapp:${fromNumber}`,
-        to: `whatsapp:${whatsappNumber}`
+        from: fromNumber,
+        to: whatsappNumber
       });
 
       res.json({ success: true, message: 'Notification sent' });

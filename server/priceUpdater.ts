@@ -131,8 +131,8 @@ class PriceUpdater {
 
       await client.messages.create({
         body: message,
-        from: `whatsapp:${fromNumber}`,
-        to: `whatsapp:${whatsappNumber}`,
+        from: fromNumber,
+        to: whatsappNumber,
       });
 
       console.log(`Sent WhatsApp notification for ${symbol} to ${whatsappNumber}`);

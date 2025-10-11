@@ -97,8 +97,8 @@ class NotificationScheduler {
 
           await client.messages.create({
             body: message,
-            from: `whatsapp:${fromNumber}`,
-            to: `whatsapp:${formattedWhatsappNumber}`
+            from: fromNumber,
+            to: formattedWhatsappNumber
           });
 
           console.log(`Scheduled notification sent at ${notification.time}: ${notification.type}`);
