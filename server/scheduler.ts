@@ -16,7 +16,8 @@ const SCHEDULED_NOTIFICATIONS: ScheduledNotification[] = [
   { time: '14:43', type: 'stock_update', stockSymbol: 'RELIANCE' },
   { time: '15:12', type: 'stock_update', stockSymbol: 'ICICIBANK' },
   { time: '15:30', type: 'market_close', message: '📉 Stock Market is now CLOSED. Trading ends for today.' },
-  { time: '18:36', type: 'market_close', message: '🌙 Stock Market is closed. It will reopen tomorrow morning at 9:15 AM.' }
+  { time: '18:36', type: 'market_close', message: '🌙 Stock Market is closed. It will reopen tomorrow morning at 9:15 AM.' },
+  { time: '18:48', type: 'market_close', message: '✅ Test notification: WhatsApp integration is working successfully!' }
 ];
 
 class NotificationScheduler {
