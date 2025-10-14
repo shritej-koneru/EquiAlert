@@ -45,6 +45,14 @@ const availableStocks: SearchResult[] = [
   { symbol: "WIPRO", name: "Wipro", price: 567.45, changePercent: 0.34 },
   { symbol: "TATASTEEL", name: "Tata Steel", price: 145.60, changePercent: -1.25 },
   { symbol: "ASIANPAINT", name: "Asian Paints", price: 2987.50, changePercent: 0.45 },
+  { symbol: "JUBLFOOD", name: "Jubilant Foodworks", price: 606.90, changePercent: -0.85 },
+  { symbol: "INDIGO", name: "InterGlobe Aviation", price: 5257.95, changePercent: 1.24 },
+  { symbol: "SPICEJET", name: "SpiceJet", price: 39.99, changePercent: -1.15 },
+  { symbol: "INDIANHOT", name: "Indian Hotels", price: 735.30, changePercent: 0.67 },
+  { symbol: "TATAMOTORS", name: "Tata Motors", price: 660.75, changePercent: 0.92 },
+  { symbol: "NAGAFERT", name: "Nagarjuna Fertilizers", price: 5.15, changePercent: -2.34 },
+  { symbol: "KCPSUGIND", name: "KCP Sugar & Industries", price: 32.50, changePercent: -0.56 },
+  { symbol: "JIOFIN", name: "Jio Financial Services", price: 308.45, changePercent: 0.10 },
 ];
 
 export default function TopBar({ 
