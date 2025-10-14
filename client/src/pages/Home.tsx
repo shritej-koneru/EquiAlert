@@ -31,11 +31,11 @@ export default function Home() {
 
   const [tickerStocks, setTickerStocks] = useState<StockTickerItem[]>([
     { symbol: "USD/INR", name: "US Dollar", price: 88.78, change: 0, changePercent: 0 },
-    { symbol: "NIFTY 50", name: "Nifty 50", price: 25208.67, change: 0, changePercent: 0 },
-    { symbol: "SENSEX", name: "BSE Sensex", price: 82030.50, change: 0, changePercent: 0 },
-    { symbol: "RELIANCE", name: "Reliance Ind", price: 1378.86, change: 0, changePercent: 0 },
-    { symbol: "TCS", name: "Tata Consultancy", price: 2978.97, change: 0, changePercent: 0 },
-    { symbol: "INFY", name: "Infosys", price: 1497.65, change: 0, changePercent: 0 },
+    { symbol: "NIFTY 50", name: "Nifty 50", price: 25208.67, change: 126.04, changePercent: 0.50 },
+    { symbol: "SENSEX", name: "BSE Sensex", price: 82030.50, change: -410.15, changePercent: -0.50 },
+    { symbol: "RELIANCE", name: "Reliance Ind", price: 1378.86, change: 17.24, changePercent: 1.27 },
+    { symbol: "TCS", name: "Tata Consultancy", price: 2978.97, change: -26.81, changePercent: -0.89 },
+    { symbol: "INFY", name: "Infosys", price: 1497.65, change: 23.96, changePercent: 1.63 },
   ]);
 
 

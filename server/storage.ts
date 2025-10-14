@@ -33,26 +33,28 @@ export class MemStorage implements IStorage {
   private initializeDefaultStocks() {
     const DEMO_USER_ID = "demo-user-1";
     const defaultStocks = [
-      { symbol: 'RELIANCE', name: 'Reliance Industries', price: 2850.50 },
-      { symbol: 'INFY', name: 'Infosys Ltd', price: 1920.75 },
-      { symbol: 'TCS', name: 'Tata Consultancy Services', price: 4150.25 },
-      { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.60 },
-      { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical', price: 1750.80 },
-      { symbol: 'MARUTI', name: 'Maruti Suzuki India', price: 12450.25 },
-      { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1680.90 },
+      { symbol: 'RELIANCE', name: 'Reliance Industries', price: 2850.50, changePercent: 1.25 },
+      { symbol: 'INFY', name: 'Infosys Ltd', price: 1920.75, changePercent: -0.85 },
+      { symbol: 'TCS', name: 'Tata Consultancy Services', price: 4150.25, changePercent: 2.10 },
+      { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', price: 1285.60, changePercent: -1.50 },
+      { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical', price: 1750.80, changePercent: 0.65 },
+      { symbol: 'MARUTI', name: 'Maruti Suzuki India', price: 12450.25, changePercent: -2.20 },
+      { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', price: 1680.90, changePercent: 1.80 },
     ];
 
     defaultStocks.forEach(stock => {
       const id = randomUUID();
+      const change = (stock.price * stock.changePercent) / 100;
+      const baselinePrice = stock.price - change;
       const item: Watchlist = {
         id,
         userId: DEMO_USER_ID,
         symbol: stock.symbol,
         name: stock.name,
         price: stock.price,
-        change: 0,
-        changePercent: 0,
-        baselinePrice: stock.price,
+        change: change,
+        changePercent: stock.changePercent,
+        baselinePrice: baselinePrice,
         hasAlert: true,
         addedAt: new Date(),
       };
