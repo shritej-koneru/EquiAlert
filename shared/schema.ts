@@ -14,7 +14,7 @@ export const profiles = pgTable("profiles", {
   userId: varchar("user_id").notNull().unique(),
   name: text("name").notNull(),
   profession: text("profession").notNull(),
-  whatsappNumber: text("whatsapp_number").notNull(),
+  phoneNumber: text("phone_number").notNull(),
 });
 
 export const watchlist = pgTable("watchlist", {
