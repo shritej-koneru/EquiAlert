@@ -67,7 +67,7 @@ export default function ProfileModal({ isOpen, onClose, profile, onSave }: Profi
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="whatsappNumber">WhatsApp Number</Label>
+            <Label htmlFor="whatsappNumber">Phone Number</Label>
             <Input
               id="whatsappNumber"
               name="whatsappNumber"
