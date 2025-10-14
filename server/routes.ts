@@ -107,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { message, context } = req.body;
       const apiKey = process.env.GROQ_API_KEY;
-      const newsApiKey = process.env.NEWS_API_KEY;
+  const newsApiKey = process.env.NEWSAPI_KEY;
 
       if (!apiKey) {
         return res.status(500).json({ message: "Groq API key not configured" });
@@ -242,7 +242,7 @@ ${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
   app.get("/api/news", async (req, res) => {
     try {
       const { category, q } = req.query;
-      const apiKey = process.env.NEWS_API_KEY;
+  const apiKey = process.env.NEWSAPI_KEY;
 
       if (!apiKey) {
         return res.status(500).json({ message: "NewsAPI key not configured" });
