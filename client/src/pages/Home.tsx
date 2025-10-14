@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import TopBar from "@/components/TopBar";
+import TopBar, { SearchResult } from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
 import StockTicker, { StockTickerItem } from "@/components/StockTicker";
 import WatchlistCard, { WatchlistStock } from "@/components/WatchlistCard";
@@ -115,6 +115,34 @@ export default function Home() {
     mutationFn: async ({ message, stockSymbol, changePercent }: { message: string; stockSymbol: string; changePercent: number }) => {
       const res = await apiRequest('POST', '/api/notify', { message, stockSymbol, changePercent });
       return res.json();
+    },
+  });
+
+  const addToWatchlistMutation = useMutation({
+    mutationFn: async (stock: SearchResult) => {
+      const change = (stock.price * stock.changePercent) / 100;
+      const res = await apiRequest('POST', '/api/watchlist', {
+        symbol: stock.symbol,
+        name: stock.name,
+        price: stock.price,
+        change: change,
+        changePercent: stock.changePercent,
+      });
+      return res.json();
+    },
+    onSuccess: (data, stock) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/watchlist'] });
+      toast({
+        title: "Added to watchlist",
+        description: `${stock.symbol} has been added to your watchlist.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add to watchlist",
+        variant: "destructive",
+      });
     },
   });
 
@@ -274,6 +302,18 @@ export default function Home() {
     saveProfileMutation.mutate(profileData);
   };
 
+  const handleStockSelect = (stock: SearchResult) => {
+    const alreadyInWatchlist = watchlistData.some(item => item.symbol === stock.symbol);
+    if (alreadyInWatchlist) {
+      toast({
+        title: "Already in watchlist",
+        description: `${stock.symbol} is already in your watchlist.`,
+      });
+      return;
+    }
+    addToWatchlistMutation.mutate(stock);
+  };
+
   const handleNotificationClick = async () => {
     if (!profile?.whatsappNumber) {
       toast({
@@ -373,6 +413,7 @@ export default function Home() {
         notificationCount={watchlistStocks.filter(s => s.hasAlert).length}
         onNotificationClick={handleNotificationClick}
         onProfileClick={() => setIsProfileOpen(true)}
+        onStockSelect={handleStockSelect}
       />
 
       <main className="container mx-auto max-w-7xl">
