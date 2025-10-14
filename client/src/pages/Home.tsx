@@ -55,16 +55,31 @@ export default function Home() {
     refetchOnWindowFocus: true,
   });
 
-  const watchlistStocks: WatchlistStock[] = watchlistData.map(item => ({
-    id: item.id,
-    symbol: item.symbol,
-    name: item.name,
-    price: item.price,
-    change: item.change,
-    changePercent: item.changePercent,
-    hasAlert: item.hasAlert,
-    chartData: generateMiniChartData(item.price),
-  }));
+  const watchlistStocks: WatchlistStock[] = watchlistData.map(item => {
+    const tickerStock = tickerStocks.find(ts => ts.symbol === item.symbol);
+    if (tickerStock) {
+      return {
+        id: item.id,
+        symbol: item.symbol,
+        name: item.name,
+        price: tickerStock.price,
+        change: tickerStock.change,
+        changePercent: tickerStock.changePercent,
+        hasAlert: item.hasAlert,
+        chartData: generateMiniChartData(tickerStock.price),
+      };
+    }
+    return {
+      id: item.id,
+      symbol: item.symbol,
+      name: item.name,
+      price: item.price,
+      change: item.change,
+      changePercent: item.changePercent,
+      hasAlert: item.hasAlert,
+      chartData: generateMiniChartData(item.price),
+    };
+  });
 
   const saveProfileMutation = useMutation({
     mutationFn: async (profileData: UserProfile) => {
@@ -189,16 +204,20 @@ export default function Home() {
   useEffect(() => {
     watchlistData.forEach(item => {
       if (!watchlistPriceTracker.current.has(item.id)) {
+        const tickerStock = tickerStocks.find(ts => ts.symbol === item.symbol);
+        const currentPrice = tickerStock ? tickerStock.price : item.price;
         watchlistPriceTracker.current.set(item.id, { 
-          price: item.price, 
+          price: currentPrice, 
           lastNotified: 0,
           lastUpdated: Date.now()
         });
       }
     });
+  }, [watchlistData, tickerStocks]);
 
+  useEffect(() => {
     const updateAllStockPrices = () => {
-      setTickerStocks(prev => prev.map(stock => {
+      const newTickerStocks = tickerStocks.map(stock => {
         if (stock.symbol === "USD/INR") return stock;
         
         let maxChange = 0;
@@ -223,30 +242,27 @@ export default function Home() {
           change: newChange,
           changePercent: newChangePercent,
         };
-      }));
+      });
+      
+      setTickerStocks(newTickerStocks);
 
       watchlistData.forEach(item => {
+        const newTickerStock = newTickerStocks.find(ts => ts.symbol === item.symbol);
         const tracked = watchlistPriceTracker.current.get(item.id);
-        if (!tracked) return;
+        if (!tracked || !newTickerStock) return;
 
-        const priceChangeMultiplier = 1 + (Math.random() - 0.5) * 0.04;
-        const newSimulatedPrice = tracked.price * priceChangeMultiplier;
+        const currentPrice = newTickerStock.price;
+        const baselinePrice = tracked.price;
         
-        const percentChange = ((newSimulatedPrice - tracked.price) / tracked.price) * 100;
+        const percentChange = ((currentPrice - baselinePrice) / baselinePrice) * 100;
         const timeSinceLastNotification = Date.now() - tracked.lastNotified;
         
-        watchlistPriceTracker.current.set(item.id, {
-          price: newSimulatedPrice,
-          lastNotified: tracked.lastNotified,
-          lastUpdated: Date.now()
-        });
-        
         if (item.hasAlert && profile?.whatsappNumber && Math.abs(percentChange) >= 1 && (tracked.lastNotified === 0 || timeSinceLastNotification > 2 * 60 * 1000)) {
-          const message = `🔔 Stock Alert: ${item.symbol} ${percentChange > 0 ? '📈 increased' : '📉 decreased'} by ${Math.abs(percentChange).toFixed(2)}%\nCurrent Price: ₹${newSimulatedPrice.toFixed(2)}`;
+          const message = `🔔 Stock Alert: ${item.symbol} ${percentChange > 0 ? '📈 increased' : '📉 decreased'} by ${Math.abs(percentChange).toFixed(2)}%\nCurrent Price: ₹${currentPrice.toFixed(2)}`;
           console.log(`Sending WhatsApp alert for ${item.symbol}: ${message}`);
           notifyMutation.mutate({ message, stockSymbol: item.symbol, changePercent: percentChange });
           watchlistPriceTracker.current.set(item.id, {
-            price: newSimulatedPrice,
+            price: currentPrice,
             lastNotified: Date.now(),
             lastUpdated: Date.now()
           });
@@ -256,7 +272,7 @@ export default function Home() {
 
     const interval = setInterval(updateAllStockPrices, 10 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [watchlistData, profile]);
+  }, [watchlistData, profile, tickerStocks]);
 
   const handleSendMessage = async (message: string) => {
     const newMessage: ChatMessage = {
