@@ -1,5 +1,5 @@
 import { Router } from "wouter";
-import BottomNav from '../BottomNav';
+import BottomNav from '@/components/BottomNav';
 
 export default function BottomNavExample() {
   return (

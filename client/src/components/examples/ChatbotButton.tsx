@@ -1,4 +1,4 @@
-import ChatbotButton from '../ChatbotButton';
+import ChatbotButton from '@/components/ChatbotButton';
 
 export default function ChatbotButtonExample() {
   return (

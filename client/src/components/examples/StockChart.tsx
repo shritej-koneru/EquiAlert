@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import StockChart, { TimeRange } from '../StockChart';
+import React from 'react';
+import StockChart, { TimeRange } from '@/components/StockChart';
 
 export default function StockChartExample() {
   const [selectedRange, setSelectedRange] = useState<TimeRange>("1D");

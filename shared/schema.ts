@@ -30,6 +30,15 @@ export const watchlist = pgTable("watchlist", {
   addedAt: timestamp("added_at").notNull().defaultNow(),
 });
 
+export const apiUsage = pgTable("api_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  apiName: text("api_name").notNull(), // e.g., "serpapi"
+  month: text("month").notNull(), // e.g., "2025-10"
+  requestCount: real("request_count").notNull().default(0),
+  lastReset: timestamp("last_reset").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,

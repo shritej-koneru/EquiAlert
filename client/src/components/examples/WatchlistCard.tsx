@@ -1,4 +1,4 @@
-import WatchlistCard from '../WatchlistCard';
+import WatchlistCard from '@/components/WatchlistCard';
 
 export default function WatchlistCardExample() {
   const stock = {

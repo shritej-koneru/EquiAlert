@@ -1,4 +1,4 @@
-import NewsCard from '../NewsCard';
+import NewsCard from '@/components/NewsCard';
 
 export default function NewsCardExample() {
   const news = {

@@ -1,4 +1,4 @@
-import MarketStatus from '../MarketStatus';
+import MarketStatus from '@/components/MarketStatus';
 
 export default function MarketStatusExample() {
   return (

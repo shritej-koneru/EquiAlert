@@ -204,7 +204,28 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+### 🚀 Getting Started
+- **[Setup Guide](docs/guides/setup.md)** - Complete installation and configuration (5 minutes)
+- **[API Keys Guide](docs/api/api-keys.md)** - How to obtain all required API keys
+- **[API Endpoints](docs/api/endpoints.md)** - REST API reference with examples
+
+### 📖 Feature Guides
+- **[Watchlist Feature](docs/guides/watchlist.md)** - Track stocks and set price alerts
+- **[Contributing Guide](docs/guides/CONTRIBUTING.md)** - How to contribute to the project
+
+### 🏗️ Architecture
+- **[Code Organization](docs/architecture/CODE_ORGANIZATION.md)** - Project structure and import conventions
+- **[SerpAPI Integration](docs/architecture/SERPAPI_INTEGRATION.md)** - Real-time stock price system
+- **[Price Caching System](docs/architecture/PRICE_CACHING_SYSTEM.md)** - Optimization and caching
+- **[Design Guidelines](docs/guides/design_guidelines.md)** - UI/UX standards and components
+
+**📑 [Complete Documentation Index](docs/README.md)** - View all documentation
+
+## �📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -212,7 +233,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Repository**: [github.com/shritej-koneru/EquiAlert](https://github.com/shritej-koneru/EquiAlert)
 - **Issues**: [Report bugs or request features](https://github.com/shritej-koneru/EquiAlert/issues)
-- **Documentation**: [Full API documentation](docs/)
+- **Documentation**: [Full documentation](docs/README.md)
 
 ## 💡 Technical Highlights
 

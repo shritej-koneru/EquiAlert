@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import NewsFilter, { NewsCategory } from '../NewsFilter';
+import React from 'react';
+import NewsFilter, { NewsCategory } from '@/components/NewsFilter';
 
 export default function NewsFilterExample() {
   const [selected, setSelected] = useState<NewsCategory>("All");

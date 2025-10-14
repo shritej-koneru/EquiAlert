@@ -37,18 +37,12 @@ export default function Stocks() {
     queryKey: ['/api/watchlist'],
   });
 
-  const watchlistSymbols = new Set(watchlistData.map(item => item.symbol));
+  const { data: availableStocks = [] } = useQuery<SearchResult[]>({
+    queryKey: ['/api/stocks/available'],
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
 
-  const availableStocks: SearchResult[] = [
-    { symbol: "HDFCBANK", name: "HDFC Bank", price: 1685.40, changePercent: 1.42 },
-    { symbol: "ICICIBANK", name: "ICICI Bank", price: 1145.75, changePercent: -0.35 },
-    { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank", price: 1834.20, changePercent: 0.82 },
-    { symbol: "HINDUNILVR", name: "Hindustan Unilever", price: 2456.30, changePercent: 0.56 },
-    { symbol: "NESTLEIND", name: "Nestlé India", price: 2389.75, changePercent: -0.23 },
-    { symbol: "SUNPHARMA", name: "Sun Pharmaceutical", price: 1678.90, changePercent: 1.15 },
-    { symbol: "BAJAJ-AUTO", name: "Bajaj Auto", price: 9234.50, changePercent: 2.34 },
-    { symbol: "MARUTI", name: "Maruti Suzuki", price: 12456.80, changePercent: -0.67 },
-  ];
+  const watchlistSymbols = new Set(watchlistData.map(item => item.symbol));
 
   const searchResults = searchQuery.trim() === "" 
     ? [] 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import ProfileModal from '../ProfileModal';
+import React from 'react';
+import ProfileModal from '@/components/ProfileModal';
 
 export default function ProfileModalExample() {
   const [profile, setProfile] = useState({

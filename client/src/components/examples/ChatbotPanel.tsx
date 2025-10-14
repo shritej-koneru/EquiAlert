@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ChatbotPanel from '../ChatbotPanel';
+import ChatbotPanel from '@/components/ChatbotPanel';
 
 export default function ChatbotPanelExample() {
   const [messages, setMessages] = useState([

@@ -1,4 +1,4 @@
-import StockTicker from '../StockTicker';
+import StockTicker from '@/components/StockTicker';
 
 export default function StockTickerExample() {
   const stocks = [

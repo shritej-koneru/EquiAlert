@@ -5,6 +5,9 @@ import OpenAI from "openai";
 import { getTwilioClient, getTwilioFromPhoneNumber } from "./twilio";
 import { priceUpdater } from "./priceUpdater";
 import { notificationScheduler } from "./scheduler";
+import { searchStocks, getStockPrice } from "./serpapi";
+import { getUsageStats, resetUsage } from "./rateLimiter";
+import { getAllCachedPrices, getCacheStats } from "./priceCache";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const DEMO_USER_ID = "demo-user-1";
@@ -100,6 +103,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Update alert error:', error);
       res.status(500).json({ message: 'Failed to update alert' });
+    }
+  });
+
+  app.get("/api/stocks/search", async (req, res) => {
+    try {
+      const { q } = req.query;
+      
+      if (!q || typeof q !== 'string') {
+        return res.status(400).json({ message: 'Search query required' });
+      }
+
+      const results = await searchStocks(q);
+      res.json({ results });
+    } catch (error) {
+      console.error('Stock search error:', error);
+      res.status(500).json({ message: 'Failed to search stocks' });
+    }
+  });
+
+  app.get("/api/stocks/price/:symbol", async (req, res) => {
+    try {
+      const { symbol } = req.params;
+      
+      if (!symbol) {
+        return res.status(400).json({ message: 'Stock symbol required' });
+      }
+
+      // Use cache by default (will fetch if not cached)
+      const priceData = await getStockPrice(symbol, true);
+      
+      if (!priceData) {
+        return res.status(404).json({ message: 'Stock not found or price unavailable' });
+      }
+
+      res.json(priceData);
+    } catch (error) {
+      console.error('Stock price fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch stock price' });
+    }
+  });
+
+  app.get("/api/stocks/available", async (req, res) => {
+    try {
+      // Popular Indian stocks to display on Stocks page
+      const popularStocks = [
+        { symbol: "HDFCBANK", name: "HDFC Bank" },
+        { symbol: "ICICIBANK", name: "ICICI Bank" },
+        { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank" },
+        { symbol: "HINDUNILVR", name: "Hindustan Unilever" },
+        { symbol: "NESTLEIND", name: "Nestlé India" },
+        { symbol: "SUNPHARMA", name: "Sun Pharmaceutical" },
+        { symbol: "BAJAJ-AUTO", name: "Bajaj Auto" },
+        { symbol: "MARUTI", name: "Maruti Suzuki" },
+        { symbol: "TITAN", name: "Titan Company" },
+        { symbol: "ASIANPAINT", name: "Asian Paints" },
+      ];
+
+      // Get cached prices or fetch for any that aren't cached
+      const stocksWithPrices = await Promise.all(
+        popularStocks.map(async (stock) => {
+          const priceData = await getStockPrice(stock.symbol, true);
+          if (priceData) {
+            return {
+              symbol: stock.symbol,
+              name: stock.name,
+              price: priceData.price,
+              currency: priceData.currency,
+              change: priceData.change || 0,
+              changePercent: priceData.changePercent || 0,
+            };
+          }
+          return null;
+        })
+      );
+
+      // Filter out any nulls
+      const validStocks = stocksWithPrices.filter(s => s !== null);
+      
+      res.json(validStocks);
+    } catch (error) {
+      console.error('Available stocks fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch available stocks' });
+    }
+  });
+
+  app.get("/api/serpapi/usage", async (req, res) => {
+    try {
+      const usageStats = getUsageStats();
+      const cacheStats = getCacheStats();
+      res.json({
+        rateLimit: usageStats,
+        cache: cacheStats,
+      });
+    } catch (error) {
+      console.error('Usage stats error:', error);
+      res.status(500).json({ message: 'Failed to get usage stats' });
+    }
+  });
+
+  app.post("/api/serpapi/reset", async (req, res) => {
+    try {
+      resetUsage();
+      const stats = getUsageStats();
+      res.json({ 
+        success: true, 
+        message: 'Usage counter reset successfully',
+        stats 
+      });
+    } catch (error) {
+      console.error('Usage reset error:', error);
+      res.status(500).json({ message: 'Failed to reset usage' });
     }
   });
 

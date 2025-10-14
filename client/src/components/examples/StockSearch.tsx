@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import StockSearch from '../StockSearch';
+import React from 'react';
+import StockSearch from '@/components/StockSearch';
 
 export default function StockSearchExample() {
   const [results] = useState([

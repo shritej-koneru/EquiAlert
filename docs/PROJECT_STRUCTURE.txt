@@ -1,0 +1,58 @@
+.
+├── LICENSE
+├── README.md
+├── components.json
+├── drizzle.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── tailwind.config.ts
+├── tsconfig.json
+├── vite.config.ts
+├── client
+│   ├── index.html
+│   └── src
+│       ├── App.tsx
+│       ├── index.css
+│       ├── main.tsx
+│       ├── components
+│       ├── hooks
+│       ├── lib
+│       └── pages
+├── docs
+│   ├── PROJECT_STRUCTURE.txt
+│   ├── README.md
+│   ├── api
+│   │   ├── api-keys.md
+│   │   ├── database.md
+│   │   ├── endpoints.md
+│   │   ├── groq.md
+│   │   ├── newsapi.md
+│   │   ├── serpapi.md
+│   │   └── twilio.md
+│   ├── architecture
+│   │   ├── CODE_ORGANIZATION.md
+│   │   ├── PRICE_CACHING_SYSTEM.md
+│   │   └── SERPAPI_INTEGRATION.md
+│   └── guides
+│       ├── CONTRIBUTING.md
+│       ├── chatbot.md
+│       ├── design_guidelines.md
+│       ├── notifications.md
+│       ├── setup.md
+│       └── watchlist.md
+├── server
+│   ├── index.ts
+│   ├── priceCache.ts
+│   ├── priceUpdater.ts
+│   ├── rateLimiter.ts
+│   ├── routes.ts
+│   ├── scheduler.ts
+│   ├── serpapi.ts
+│   ├── storage.ts
+│   ├── twilio.ts
+│   └── vite.ts
+└── shared
+    └── schema.ts
+
+13 directories, 43 files

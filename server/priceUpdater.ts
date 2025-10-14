@@ -1,5 +1,7 @@
 import { storage } from "./storage";
 import { getTwilioClient, getTwilioFromPhoneNumber } from "./twilio";
+import { getStockPrice } from "./serpapi";
+import { needsRefresh, getCachedPrice, setCachedPrice } from "./priceCache";
 
 interface NotificationState {
   lastNotificationPrice: number;
@@ -10,10 +12,37 @@ class PriceUpdater {
   private notificationState: Map<string, NotificationState> = new Map();
   private interval: NodeJS.Timeout | null = null;
 
-  start() {
-    console.log("Starting price updater - will update every 5 minutes");
+  async start() {
+    console.log("Starting price updater - will update every 30 minutes");
+    
+    // Initialize cache with baseline prices from watchlist
+    await this.initializeBaselines();
+    
     this.updatePrices();
-    this.interval = setInterval(() => this.updatePrices(), 5 * 60 * 1000);
+    // Update every 30 minutes instead of 5 to conserve API calls
+    this.interval = setInterval(() => this.updatePrices(), 30 * 60 * 1000);
+  }
+
+  private async initializeBaselines() {
+    try {
+      const allWatchlistItems = await storage.getAllWatchlistItems();
+      console.log(`Initializing baseline prices for ${allWatchlistItems.length} watchlist items`);
+      
+      for (const item of allWatchlistItems) {
+        // Set cached price with baseline from database
+        setCachedPrice(
+          item.symbol,
+          item.price,
+          'INR',
+          'NSE',
+          item.baselinePrice
+        );
+      }
+      
+      console.log(`✓ Baselines initialized for watchlist items`);
+    } catch (error) {
+      console.error("Error initializing baselines:", error);
+    }
   }
 
   stop() {
@@ -27,7 +56,19 @@ class PriceUpdater {
   private async updatePrices() {
     try {
       const allWatchlistItems = await storage.getAllWatchlistItems();
-      console.log(`Updating prices for ${allWatchlistItems.length} watchlist items`);
+      
+      // Filter items that need price refresh (cache expired or missing)
+      const itemsNeedingUpdate = allWatchlistItems.filter(item => {
+        if (item.symbol === "USD/INR") return false;
+        return needsRefresh(item.symbol);
+      });
+      
+      if (itemsNeedingUpdate.length === 0) {
+        console.log(`✓ All ${allWatchlistItems.length} watchlist prices are cached and fresh`);
+        return;
+      }
+      
+      console.log(`Updating prices for ${itemsNeedingUpdate.length}/${allWatchlistItems.length} watchlist items (others cached)`);
 
       const currentWatchlistIds = new Set(allWatchlistItems.map(item => item.id));
       const stateIds = Array.from(this.notificationState.keys());
@@ -38,11 +79,7 @@ class PriceUpdater {
         }
       }
 
-      for (const item of allWatchlistItems) {
-        if (item.symbol === "USD/INR") {
-          continue;
-        }
-
+      for (const item of itemsNeedingUpdate) {
         let notifState = this.notificationState.get(item.id);
         if (!notifState) {
           notifState = {
@@ -52,11 +89,21 @@ class PriceUpdater {
           this.notificationState.set(item.id, notifState);
         }
 
-        const tickChangePercent = (Math.random() - 0.5) * 4;
-        const tickChange = item.price * (tickChangePercent / 100);
-        const newPrice = item.price + tickChange;
+        // Ensure baseline is set in cache before fetching
+        setCachedPrice(item.symbol, item.price, 'INR', 'NSE', item.baselinePrice);
+        
+        // Fetch real stock price from SerpAPI (will use cache if available)
+        const stockData = await getStockPrice(item.symbol, false); // force fresh fetch
+        
+        if (!stockData) {
+          console.log(`Could not fetch price for ${item.symbol}, skipping update`);
+          continue;
+        }
+
+        const newPrice = stockData.price;
         const newChange = newPrice - item.baselinePrice;
         const newChangePercent = (newChange / item.baselinePrice) * 100;
+        const tickChangePercent = ((newPrice - item.price) / item.price) * 100;
 
         let updated: any;
         try {
