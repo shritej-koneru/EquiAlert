@@ -1,7 +1,7 @@
 import { TrendingUp, TrendingDown, Bell, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Line, LineChart } from "recharts";
+import { Area, AreaChart } from "recharts";
 
 export interface WatchlistStock {
   id: string;
@@ -26,6 +26,7 @@ export default function WatchlistCard({ stock, onRemove, onSetAlert, onClick }: 
   const Icon = isPositive ? TrendingUp : TrendingDown;
   const colorClass = isPositive ? "text-positive" : "text-negative";
   const chartColor = isPositive ? "#00FF7F" : "#FF4C4C";
+  const chartFillColor = isPositive ? "rgba(0, 255, 127, 0.2)" : "rgba(255, 76, 76, 0.2)";
 
   return (
     <Card 
@@ -86,15 +87,22 @@ export default function WatchlistCard({ stock, onRemove, onSetAlert, onClick }: 
         </div>
 
         <div className="w-24 h-16">
-          <LineChart width={96} height={64} data={stock.chartData}>
-            <Line 
-              type="monotone" 
+          <AreaChart width={96} height={64} data={stock.chartData}>
+            <defs>
+              <linearGradient id={`gradient-${stock.id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={chartColor} stopOpacity={0.4} />
+                <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <Area 
+              type="natural" 
               dataKey="value" 
               stroke={chartColor} 
-              strokeWidth={2} 
+              strokeWidth={2.5} 
+              fill={`url(#gradient-${stock.id})`}
               dot={false}
             />
-          </LineChart>
+          </AreaChart>
         </div>
       </div>
     </Card>

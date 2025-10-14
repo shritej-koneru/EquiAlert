@@ -30,12 +30,12 @@ export default function Home() {
   const { toast } = useToast();
 
   const [tickerStocks, setTickerStocks] = useState<StockTickerItem[]>([
-    { symbol: "USD/INR", name: "US Dollar", price: 88.67, change: 0.15, changePercent: 0.17 },
-    { symbol: "NIFTY 50", name: "Nifty 50", price: 23567.80, change: 145.30, changePercent: 0.62 },
-    { symbol: "SENSEX", name: "BSE Sensex", price: 77890.25, change: -234.50, changePercent: -0.30 },
-    { symbol: "RELIANCE", name: "Reliance Ind", price: 2845.60, change: 23.40, changePercent: 0.83 },
-    { symbol: "TCS", name: "Tata Consultancy", price: 3967.25, change: -15.80, changePercent: -0.40 },
-    { symbol: "INFY", name: "Infosys", price: 1823.50, change: 12.30, changePercent: 0.68 },
+    { symbol: "USD/INR", name: "US Dollar", price: 88.78, change: 0, changePercent: 0 },
+    { symbol: "NIFTY 50", name: "Nifty 50", price: 25208.67, change: 0, changePercent: 0 },
+    { symbol: "SENSEX", name: "BSE Sensex", price: 82030.50, change: 0, changePercent: 0 },
+    { symbol: "RELIANCE", name: "Reliance Ind", price: 1378.86, change: 0, changePercent: 0 },
+    { symbol: "TCS", name: "Tata Consultancy", price: 2978.97, change: 0, changePercent: 0 },
+    { symbol: "INFY", name: "Infosys", price: 1497.65, change: 0, changePercent: 0 },
   ]);
 
 
@@ -201,7 +201,18 @@ export default function Home() {
       setTickerStocks(prev => prev.map(stock => {
         if (stock.symbol === "USD/INR") return stock;
         
-        const priceChange = (Math.random() - 0.5) * stock.price * 0.04;
+        let maxChange = 0;
+        if (stock.symbol === "SENSEX" || stock.symbol === "NIFTY 50") {
+          maxChange = 15;
+        } else if (stock.symbol === "RELIANCE" || stock.symbol === "TCS") {
+          maxChange = 4;
+        } else if (stock.symbol === "INFY") {
+          maxChange = 3;
+        } else {
+          maxChange = stock.price * 0.02;
+        }
+        
+        const priceChange = (Math.random() - 0.5) * 2 * maxChange;
         const newPrice = stock.price + priceChange;
         const newChange = stock.change + priceChange;
         const newChangePercent = (newChange / (newPrice - newChange)) * 100;
@@ -243,8 +254,7 @@ export default function Home() {
       });
     };
 
-    const randomInterval = Math.floor(Math.random() * (10 - 5 + 1) + 5) * 60 * 1000;
-    const interval = setInterval(updateAllStockPrices, randomInterval);
+    const interval = setInterval(updateAllStockPrices, 10 * 60 * 1000);
     return () => clearInterval(interval);
   }, [watchlistData, profile]);
 
