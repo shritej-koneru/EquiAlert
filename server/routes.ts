@@ -15,7 +15,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (profile) {
         res.json(profile);
       } else {
-        res.json({ userId: DEMO_USER_ID, name: "", profession: "", whatsappNumber: "" });
+        res.json({ userId: DEMO_USER_ID, name: "", profession: "", phoneNumber: "" });
       }
     } catch (error) {
       console.error('Profile fetch error:', error);
@@ -25,14 +25,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/profile", async (req, res) => {
     try {
-      const { name, profession, whatsappNumber } = req.body;
+      const { name, profession, phoneNumber } = req.body;
       const existing = await storage.getProfile(DEMO_USER_ID);
       
       let profile;
       if (existing) {
-        profile = await storage.updateProfile(DEMO_USER_ID, { name, profession, whatsappNumber });
+        profile = await storage.updateProfile(DEMO_USER_ID, { name, profession, phoneNumber });
       } else {
-        profile = await storage.createProfile({ userId: DEMO_USER_ID, name, profession, whatsappNumber });
+        profile = await storage.createProfile({ userId: DEMO_USER_ID, name, profession, phoneNumber });
       }
       
       res.json(profile);
@@ -178,24 +178,24 @@ ${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
       const botMessage = response.choices[0].message.content;
 
       const profile = await storage.getProfile(DEMO_USER_ID);
-      if (profile && profile.whatsappNumber) {
+      if (profile && profile.phoneNumber) {
         try {
           const client = await getTwilioClient();
           const fromNumber = await getTwilioFromPhoneNumber();
 
           if (fromNumber) {
-            const whatsappNumber = profile.whatsappNumber.startsWith('+') 
-              ? profile.whatsappNumber 
-              : `+${profile.whatsappNumber}`;
+            const toPhoneNumber = profile.phoneNumber.startsWith('+') 
+              ? profile.phoneNumber 
+              : `+${profile.phoneNumber}`;
 
             await client.messages.create({
               body: `🤖 Market Assistant: ${botMessage}`,
               from: fromNumber,
-              to: whatsappNumber
+              to: toPhoneNumber
             });
           }
-        } catch (whatsappError) {
-          console.error('WhatsApp notification error (non-blocking):', whatsappError);
+        } catch (smsError) {
+          console.error('SMS notification error (non-blocking):', smsError);
         }
       }
 
@@ -211,8 +211,8 @@ ${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
       const { message, stockSymbol, changePercent } = req.body;
       
       const profile = await storage.getProfile(DEMO_USER_ID);
-      if (!profile || !profile.whatsappNumber) {
-        return res.status(400).json({ message: 'WhatsApp number not configured in profile' });
+      if (!profile || !profile.phoneNumber) {
+        return res.status(400).json({ message: 'Phone number not configured in profile' });
       }
 
       const client = await getTwilioClient();
@@ -222,19 +222,19 @@ ${context ? `\nUser's Current Watchlist: ${context}` : ''}${newsContext}`;
         return res.status(500).json({ message: 'Twilio phone number not configured' });
       }
 
-      const whatsappNumber = profile.whatsappNumber.startsWith('+') 
-        ? profile.whatsappNumber 
-        : `+${profile.whatsappNumber}`;
+      const toPhoneNumber = profile.phoneNumber.startsWith('+') 
+        ? profile.phoneNumber 
+        : `+${profile.phoneNumber}`;
 
       await client.messages.create({
         body: message || `Stock Alert: ${stockSymbol} ${changePercent > 0 ? 'increased' : 'decreased'} by ${Math.abs(changePercent).toFixed(2)}%`,
         from: fromNumber,
-        to: whatsappNumber
+        to: toPhoneNumber
       });
 
       res.json({ success: true, message: 'Notification sent' });
     } catch (error) {
-      console.error('WhatsApp notification error:', error);
+      console.error('SMS notification error:', error);
       res.status(500).json({ message: 'Failed to send notification' });
     }
   });

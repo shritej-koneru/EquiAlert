@@ -66,8 +66,8 @@ class NotificationScheduler {
       const DEMO_USER_ID = "demo-user-1";
       const profile = await storage.getProfile(DEMO_USER_ID);
       
-      if (!profile || !profile.whatsappNumber) {
-        console.error('WhatsApp number not configured in profile');
+      if (!profile || !profile.phoneNumber) {
+        console.error('Phone number not configured in profile');
         return;
       }
 
@@ -91,21 +91,21 @@ class NotificationScheduler {
         const fromNumber = await getTwilioFromPhoneNumber();
 
         if (fromNumber) {
-          const formattedWhatsappNumber = profile.whatsappNumber.startsWith('+') 
-            ? profile.whatsappNumber 
-            : `+${profile.whatsappNumber}`;
+          const toPhoneNumber = profile.phoneNumber.startsWith('+') 
+            ? profile.phoneNumber 
+            : `+${profile.phoneNumber}`;
 
           await client.messages.create({
             body: message,
             from: fromNumber,
-            to: formattedWhatsappNumber
+            to: toPhoneNumber
           });
 
-          console.log(`Scheduled notification sent at ${notification.time}: ${notification.type}`);
+          console.log(`Scheduled SMS notification sent at ${notification.time}: ${notification.type}`);
         }
       }
     } catch (error) {
-      console.error('Failed to send scheduled notification:', error);
+      console.error('Failed to send scheduled SMS notification:', error);
     }
   }
 }

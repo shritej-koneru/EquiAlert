@@ -12,7 +12,7 @@ import {
 export interface UserProfile {
   name: string;
   profession: string;
-  whatsappNumber: string;
+  phoneNumber: string;
 }
 
 interface ProfileModalProps {
@@ -29,7 +29,7 @@ export default function ProfileModal({ isOpen, onClose, profile, onSave }: Profi
     onSave({
       name: formData.get('name') as string,
       profession: formData.get('profession') as string,
-      whatsappNumber: formData.get('whatsappNumber') as string,
+      phoneNumber: formData.get('phoneNumber') as string,
     });
     onClose();
   };
@@ -67,13 +67,13 @@ export default function ProfileModal({ isOpen, onClose, profile, onSave }: Profi
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="whatsappNumber">Phone Number</Label>
+            <Label htmlFor="phoneNumber">Phone Number</Label>
             <Input
-              id="whatsappNumber"
-              name="whatsappNumber"
-              defaultValue={profile.whatsappNumber}
+              id="phoneNumber"
+              name="phoneNumber"
+              defaultValue={profile.phoneNumber}
               placeholder="+91 XXXXX XXXXX"
-              data-testid="input-whatsapp"
+              data-testid="input-phone"
               required
             />
           </div>

@@ -111,7 +111,7 @@ class PriceUpdater {
   ) {
     try {
       const profile = await storage.getProfile(userId);
-      if (!profile || !profile.whatsappNumber) {
+      if (!profile || !profile.phoneNumber) {
         return;
       }
 
@@ -123,21 +123,21 @@ class PriceUpdater {
         return;
       }
 
-      const whatsappNumber = profile.whatsappNumber.startsWith('+')
-        ? profile.whatsappNumber
-        : `+${profile.whatsappNumber}`;
+      const toPhoneNumber = profile.phoneNumber.startsWith('+')
+        ? profile.phoneNumber
+        : `+${profile.phoneNumber}`;
 
       const message = `🔔 Stock Alert: ${symbol} ${percentChange > 0 ? '📈 increased' : '📉 decreased'} by ${Math.abs(percentChange).toFixed(2)}%\nCurrent Price: ₹${currentPrice.toFixed(2)}`;
 
       await client.messages.create({
         body: message,
         from: fromNumber,
-        to: whatsappNumber,
+        to: toPhoneNumber,
       });
 
-      console.log(`Sent WhatsApp notification for ${symbol} to ${whatsappNumber}`);
+      console.log(`Sent SMS notification for ${symbol} to ${toPhoneNumber}`);
     } catch (error) {
-      console.error(`Failed to send WhatsApp notification for ${symbol}:`, error);
+      console.error(`Failed to send SMS notification for ${symbol}:`, error);
     }
   }
 }

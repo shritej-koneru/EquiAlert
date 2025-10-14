@@ -257,9 +257,9 @@ export default function Home() {
         const percentChange = ((currentPrice - baselinePrice) / baselinePrice) * 100;
         const timeSinceLastNotification = Date.now() - tracked.lastNotified;
         
-        if (item.hasAlert && profile?.whatsappNumber && Math.abs(percentChange) >= 1 && (tracked.lastNotified === 0 || timeSinceLastNotification > 2 * 60 * 1000)) {
+        if (item.hasAlert && profile?.phoneNumber && Math.abs(percentChange) >= 1 && (tracked.lastNotified === 0 || timeSinceLastNotification > 2 * 60 * 1000)) {
           const message = `🔔 Stock Alert: ${item.symbol} ${percentChange > 0 ? '📈 increased' : '📉 decreased'} by ${Math.abs(percentChange).toFixed(2)}%\nCurrent Price: ₹${currentPrice.toFixed(2)}`;
-          console.log(`Sending WhatsApp alert for ${item.symbol}: ${message}`);
+          console.log(`Sending SMS alert for ${item.symbol}: ${message}`);
           notifyMutation.mutate({ message, stockSymbol: item.symbol, changePercent: percentChange });
           watchlistPriceTracker.current.set(item.id, {
             price: currentPrice,
@@ -341,10 +341,10 @@ export default function Home() {
   };
 
   const handleNotificationClick = async () => {
-    if (!profile?.whatsappNumber) {
+    if (!profile?.phoneNumber) {
       toast({
-        title: "WhatsApp not configured",
-        description: "Please add your WhatsApp number in your profile to receive notifications.",
+        title: "Phone not configured",
+        description: "Please add your phone number in your profile to receive notifications.",
         variant: "destructive",
       });
       setIsProfileOpen(true);
@@ -372,12 +372,12 @@ export default function Home() {
       });
       toast({
         title: "Notification sent",
-        description: "Watchlist summary sent to your WhatsApp.",
+        description: "Watchlist summary sent via SMS.",
       });
     } catch (error) {
       toast({
         title: "Failed to send notification",
-        description: "Please check your WhatsApp number and Twilio configuration.",
+        description: "Please check your phone number and Twilio configuration.",
         variant: "destructive",
       });
     }
@@ -497,7 +497,7 @@ export default function Home() {
       <ProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        profile={profile || { name: "", profession: "", whatsappNumber: "" }}
+        profile={profile || { name: "", profession: "", phoneNumber: "" }}
         onSave={handleSaveProfile}
       />
     </div>

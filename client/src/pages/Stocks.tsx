@@ -254,7 +254,7 @@ export default function Stocks() {
       <ProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
-        profile={profile || { name: "", profession: "", whatsappNumber: "" }}
+        profile={profile || { name: "", profession: "", phoneNumber: "" }}
         onSave={handleSaveProfile}
       />
     </div>
