@@ -10,7 +10,7 @@ EquiAlert is a full-stack, real-time stock market web application specifically d
 - **Real-time Stock Tracking** - Live price updates with color-coded market indicators
 - **Indian Market Focus** - NSE, BSE, NIFTY 50, SENSEX coverage
 - **Personal Watchlists** - Add, remove, and manage your favorite stocks
-- **Price Alerts** - WhatsApp notifications for significant price movements
+- **Price Alerts** - SMS notifications for significant price movements
 - **Market News** - Curated Indian financial news with category filtering
 - **AI Chatbot** - Market insights powered by Groq AI (Llama 3.3 70B)
 
@@ -19,7 +19,7 @@ EquiAlert is a full-stack, real-time stock market web application specifically d
 - **Responsive Layout** - Optimized for mobile, tablet, and desktop
 - **Real-time Updates** - Live price feeds and market status indicators
 - **Smooth Animations** - Polished micro-interactions and transitions
-- **WhatsApp Integration** - Scheduled market updates and alerts
+- **SMS Integration** - Scheduled market updates and alerts
 
 ### 🔧 **Technical Features**
 - **TypeScript** - Full type safety across frontend and backend
@@ -47,11 +47,11 @@ DATABASE_URL="postgresql://username:password@host:port/database"
 NEWSAPI_KEY="your_newsapi_key"
 GROQ_API_KEY="your_groq_api_key"
 
-# Twilio WhatsApp (Optional)
+# Twilio SMS (Optional)
 TWILIO_ACCOUNT_SID="your_twilio_sid"
 TWILIO_AUTH_TOKEN="your_twilio_token"
 TWILIO_PHONE_NUMBER="+1234567890"
-WHATSAPP_NUMBER="+919876543210"
+SMS_NUMBER="+919876543210"
 
 # Server Configuration
 PORT=5000
@@ -107,7 +107,7 @@ npm start
 ### **External Integrations**
 - **NewsAPI** - Financial news aggregation
 - **Groq AI** - Market analysis chatbot (Llama 3.3 70B)
-- **Twilio** - WhatsApp messaging for alerts
+- **Twilio** - SMS messaging for alerts
 - **Stock APIs** - Real-time Indian market data
 
 ### **Project Structure**
@@ -146,7 +146,7 @@ EquiAlert/
 ### **Market Data**
 - `GET /api/news` - Fetch market news with filtering
 - `POST /api/chat` - AI chatbot interactions
-- `POST /api/notify` - Send WhatsApp notifications
+- `POST /api/notify` - Send SMS notifications
 
 ## 🎨 Design System
 
@@ -161,7 +161,7 @@ EquiAlert/
 - **Cards** - Elevated surfaces for stock data and news
 - **Charts** - Interactive price charts with multiple timeframes
 - **Modals** - Full-screen overlays for detailed views
-- **Notifications** - Toast messages and WhatsApp alerts
+- **Notifications** - Toast messages and SMS alerts
 
 ## 🔧 Configuration
 
@@ -172,7 +172,7 @@ The application uses Drizzle ORM with the following core tables:
 - `watchlist` - Personal stock tracking
 
 ### **Scheduled Notifications**
-Automated WhatsApp messages sent at:
+Automated SMS messages sent at:
 - 9:15 AM - Market opening
 - Throughout the day - Stock updates for major companies
 - 3:30 PM - Market closing
