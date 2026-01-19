@@ -8,6 +8,7 @@ import { notificationScheduler } from "./scheduler";
 import { searchStocks, getStockPrice } from "./serpapi";
 import { getUsageStats, resetUsage } from "./rateLimiter";
 import { getAllCachedPrices, getCacheStats } from "./priceCache";
+import { getStockPriceFromGoogle, getMultipleStockPrices } from "./googleFinance";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const DEMO_USER_ID = "demo-user-1";
@@ -141,6 +142,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Stock price fetch error:', error);
       res.status(500).json({ message: 'Failed to fetch stock price' });
+    }
+  });
+
+  // New endpoint: Fetch stock price using Google Finance scraper
+  app.get("/api/stocks/google/:ticker/:exchange", async (req, res) => {
+    try {
+      const { ticker, exchange } = req.params;
+      
+      if (!ticker || !exchange) {
+        return res.status(400).json({ message: 'Ticker and exchange required' });
+      }
+
+      const priceData = await getStockPriceFromGoogle(ticker, exchange);
+      
+      if (priceData.error) {
+        return res.status(404).json({ message: priceData.error });
+      }
+
+      res.json(priceData);
+    } catch (error) {
+      console.error('Google Finance fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch stock price from Google Finance' });
+    }
+  });
+
+  // New endpoint: Fetch multiple stock prices at once
+  app.post("/api/stocks/google/batch", async (req, res) => {
+    try {
+      const { stocks } = req.body;
+      
+      if (!Array.isArray(stocks) || stocks.length === 0) {
+        return res.status(400).json({ message: 'Stocks array required' });
+      }
+
+      const priceData = await getMultipleStockPrices(stocks);
+      res.json({ stocks: priceData });
+    } catch (error) {
+      console.error('Batch Google Finance fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch stock prices' });
     }
   });
 

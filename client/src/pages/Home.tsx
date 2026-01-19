@@ -30,13 +30,13 @@ export default function Home() {
   const { toast } = useToast();
 
   const [tickerStocks, setTickerStocks] = useState<StockTickerItem[]>([
-    { symbol: "USD/INR", name: "US Dollar", price: 88.78, change: 0, changePercent: 0 },
-    { symbol: "NIFTY 50", name: "Nifty 50", price: 25208.67, change: 126.04, changePercent: 0.50 },
-    { symbol: "SENSEX", name: "BSE Sensex", price: 82030.50, change: -410.15, changePercent: -0.50 },
-    { symbol: "RELIANCE", name: "Reliance Ind", price: 1378.86, change: 17.24, changePercent: 1.27 },
-    { symbol: "TCS", name: "Tata Consultancy", price: 2978.97, change: -26.81, changePercent: -0.89 },
-    { symbol: "INFY", name: "Infosys", price: 1497.65, change: 23.96, changePercent: 1.63 },
+    { symbol: "RELIANCE", name: "Reliance Ind", price: 0, change: 0, changePercent: 0 },
+    { symbol: "TCS", name: "Tata Consultancy", price: 0, change: 0, changePercent: 0 },
+    { symbol: "INFY", name: "Infosys", price: 0, change: 0, changePercent: 0 },
+    { symbol: "HDFCBANK", name: "HDFC Bank", price: 0, change: 0, changePercent: 0 },
+    { symbol: "ICICIBANK", name: "ICICI Bank", price: 0, change: 0, changePercent: 0 },
   ]);
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
 
   const [currentTime, setCurrentTime] = useState("");
@@ -44,6 +44,7 @@ export default function Home() {
   const [nextOpenTime, setNextOpenTime] = useState("");
   
   const watchlistPriceTracker = useRef(new Map<string, { price: number, lastNotified: number, lastUpdated: number }>());
+  const baselinePrices = useRef(new Map<string, number>());
 
   const { data: profile, isLoading: profileLoading } = useQuery<UserProfile>({
     queryKey: ['/api/profile'],
@@ -215,63 +216,97 @@ export default function Home() {
     });
   }, [watchlistData, tickerStocks]);
 
+  // Fetch real stock prices from Google Finance API
   useEffect(() => {
-    const updateAllStockPrices = () => {
-      const newTickerStocks = tickerStocks.map(stock => {
-        if (stock.symbol === "USD/INR") return stock;
-        
-        let maxChange = 0;
-        if (stock.symbol === "SENSEX" || stock.symbol === "NIFTY 50") {
-          maxChange = 15;
-        } else if (stock.symbol === "RELIANCE" || stock.symbol === "TCS") {
-          maxChange = 4;
-        } else if (stock.symbol === "INFY") {
-          maxChange = 3;
-        } else {
-          maxChange = stock.price * 0.02;
-        }
-        
-        const priceChange = (Math.random() - 0.5) * 2 * maxChange;
-        const newPrice = stock.price + priceChange;
-        const newChange = stock.change + priceChange;
-        const newChangePercent = (newChange / (newPrice - newChange)) * 100;
-        
-        return {
-          ...stock,
-          price: newPrice,
-          change: newChange,
-          changePercent: newChangePercent,
-        };
-      });
-      
-      setTickerStocks(newTickerStocks);
+    const fetchStockPrices = async () => {
+      try {
+        setIsLoadingPrices(true);
+        const stocksToFetch = [
+          { ticker: "RELIANCE", exchange: "NSE" },
+          { ticker: "TCS", exchange: "NSE" },
+          { ticker: "INFY", exchange: "NSE" },
+          { ticker: "HDFCBANK", exchange: "NSE" },
+          { ticker: "ICICIBANK", exchange: "NSE" },
+        ];
 
-      watchlistData.forEach(item => {
-        const newTickerStock = newTickerStocks.find(ts => ts.symbol === item.symbol);
-        const tracked = watchlistPriceTracker.current.get(item.id);
-        if (!tracked || !newTickerStock) return;
+        const res = await apiRequest('POST', '/api/stocks/google/batch', { stocks: stocksToFetch });
+        const data = await res.json();
+        
+        if (data.stocks && Array.isArray(data.stocks)) {
+          const updatedStocks = data.stocks.map((stockData: any, index: number) => {
+            const stockInfo = tickerStocks[index];
+            if (stockData.error || stockData.price === 0) {
+              return stockInfo; // Keep existing data if fetch failed
+            }
 
-        const currentPrice = newTickerStock.price;
-        const baselinePrice = tracked.price;
-        
-        const percentChange = ((currentPrice - baselinePrice) / baselinePrice) * 100;
-        const timeSinceLastNotification = Date.now() - tracked.lastNotified;
-        
-        if (item.hasAlert && profile?.phoneNumber && Math.abs(percentChange) >= 1 && (tracked.lastNotified === 0 || timeSinceLastNotification > 2 * 60 * 1000)) {
-          const message = `🔔 Stock Alert: ${item.symbol} ${percentChange > 0 ? '📈 increased' : '📉 decreased'} by ${Math.abs(percentChange).toFixed(2)}%\nCurrent Price: ₹${currentPrice.toFixed(2)}`;
-          console.log(`Sending SMS alert for ${item.symbol}: ${message}`);
-          notifyMutation.mutate({ message, stockSymbol: item.symbol, changePercent: percentChange });
-          watchlistPriceTracker.current.set(item.id, {
-            price: currentPrice,
-            lastNotified: Date.now(),
-            lastUpdated: Date.now()
+            // Calculate change from baseline
+            const baseline = baselinePrices.current.get(stockData.ticker) || stockData.price;
+            if (!baselinePrices.current.has(stockData.ticker)) {
+              baselinePrices.current.set(stockData.ticker, stockData.price);
+            }
+            
+            const change = stockData.price - baseline;
+            const changePercent = (change / baseline) * 100;
+
+            return {
+              symbol: stockData.ticker,
+              name: stockInfo.name,
+              price: stockData.price,
+              change: change,
+              changePercent: changePercent,
+            };
           });
+          
+          setTickerStocks(updatedStocks);
         }
-      });
+      } catch (error) {
+        console.error('Failed to fetch stock prices:', error);
+      } finally {
+        setIsLoadingPrices(false);
+      }
     };
 
-    const interval = setInterval(updateAllStockPrices, 10 * 60 * 1000);
+    // Fetch immediately on mount
+    fetchStockPrices();
+    
+    // Fetch every 5 minutes
+    const interval = setInterval(fetchStockPrices, 5 * 60 * 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Monitor watchlist for price alerts
+  useEffect(() => {
+    watchlistData.forEach(item => {
+      const tickerStock = tickerStocks.find(ts => ts.symbol === item.symbol);
+      if (!tickerStock || tickerStock.price === 0) return;
+
+      const tracked = watchlistPriceTracker.current.get(item.id);
+      if (!tracked) {
+        watchlistPriceTracker.current.set(item.id, {
+          price: tickerStock.price,
+          lastNotified: 0,
+          lastUpdated: Date.now()
+        });
+        return;
+      }
+
+      const currentPrice = tickerStock.price;
+      const baselinePrice = tracked.price;
+      const percentChange = ((currentPrice - baselinePrice) / baselinePrice) * 100;
+      const timeSinceLastNotification = Date.now() - tracked.lastNotified;
+      
+      if (item.hasAlert && profile?.phoneNumber && Math.abs(percentChange) >= 1 && 
+          (tracked.lastNotified === 0 || timeSinceLastNotification > 2 * 60 * 1000)) {
+        const message = `🔔 Stock Alert: ${item.symbol} ${percentChange > 0 ? '📈 increased' : '📉 decreased'} by ${Math.abs(percentChange).toFixed(2)}%\nCurrent Price: ₹${currentPrice.toFixed(2)}`;
+        console.log(`Sending SMS alert for ${item.symbol}: ${message}`);
+        notifyMutation.mutate({ message, stockSymbol: item.symbol, changePercent: percentChange });
+        watchlistPriceTracker.current.set(item.id, {
+          price: currentPrice,
+          lastNotified: Date.now(),
+          lastUpdated: Date.now()
+        });
+      }
+    });
   }, [watchlistData, profile, tickerStocks]);
 
   const handleSendMessage = async (message: string) => {
