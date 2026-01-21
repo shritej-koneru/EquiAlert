@@ -48,11 +48,35 @@ export async function getStockPriceFromGoogle(
     const html = await response.text();
     const $ = cheerio.load(html);
     
-    // Google Finance uses this class for the price
-    const className = 'YMlKec.fxKbKc';
-    const priceElement = $(`.${className.replace('.', '.')}`).first();
+    // Try multiple selectors for the current price
+    let priceText = '';
+    let priceElement;
     
-    if (!priceElement || priceElement.length === 0) {
+    // Try different selectors that Google Finance uses
+    const selectors = [
+      'div.YMlKec.fxKbKc',
+      '.YMlKec.fxKbKc',
+      'div[data-last-price]',
+      'div.YMlKec',
+    ];
+    
+    for (const selector of selectors) {
+      priceElement = $(selector).first();
+      if (priceElement && priceElement.length > 0) {
+        priceText = priceElement.text().trim();
+        if (priceText) break;
+      }
+    }
+    
+    // Also try data attribute
+    if (!priceText) {
+      const dataPrice = $('div[data-last-price]').attr('data-last-price');
+      if (dataPrice) {
+        priceText = dataPrice;
+      }
+    }
+    
+    if (!priceText) {
       return {
         ticker: upperTicker,
         exchange: upperExchange,
@@ -61,8 +85,6 @@ export async function getStockPriceFromGoogle(
         error: 'Invalid ticker or exchange - price element not found'
       };
     }
-    
-    const priceText = priceElement.text().trim();
     
     // Remove currency symbol and commas, then parse
     // Price format examples: "$234.56", "₹1,234.56"
@@ -75,7 +97,7 @@ export async function getStockPriceFromGoogle(
         exchange: upperExchange,
         price: 0,
         currency: 'INR',
-        error: 'Failed to parse price from Google Finance'
+        error: `Failed to parse price from Google Finance. Raw text: ${priceText}`
       };
     }
     

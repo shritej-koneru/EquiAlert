@@ -21,6 +21,9 @@ interface CachedPrice {
 // Cache TTL: 30 minutes (prices stay fresh for 30 min)
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
+// Maximum cache entries (prevent unbounded growth)
+const MAX_CACHE_SIZE = 100;
+
 // In-memory price cache
 const priceCache = new Map<string, CachedPrice>();
 
@@ -47,6 +50,7 @@ export function getCachedPrice(symbol: string): CachedPrice | null {
 
 /**
  * Store price in cache with change calculation
+ * Implements LRU eviction when cache is full
  */
 export function setCachedPrice(
   symbol: string,
@@ -65,6 +69,14 @@ export function setCachedPrice(
   // Calculate change from baseline
   const change = price - baseline;
   const changePercent = baseline !== 0 ? (change / baseline) * 100 : 0;
+  
+  // LRU eviction: if cache is full, remove oldest entry
+  if (priceCache.size >= MAX_CACHE_SIZE && !priceCache.has(normalizedSymbol)) {
+    const firstKey = priceCache.keys().next().value;
+    if (firstKey) {
+      priceCache.delete(firstKey);
+    }
+  }
   
   priceCache.set(normalizedSymbol, {
     symbol: normalizedSymbol,

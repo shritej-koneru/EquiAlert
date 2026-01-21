@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import StockSearch, { SearchResult } from "@/components/StockSearch";
-import StockChart, { TimeRange, ChartDataPoint } from "@/components/StockChart";
+import { SearchResult } from "@/components/StockSearch";
+import StockChart, { TimeRange, ChartDataPoint, ChartStats } from "@/components/StockChart";
 import ProfileModal, { UserProfile } from "@/components/ProfileModal";
 import ChatbotButton from "@/components/ChatbotButton";
 import ChatbotPanel, { ChatMessage } from "@/components/ChatbotPanel";
@@ -13,12 +13,26 @@ import { Button } from "@/components/ui/button";
 import { Plus, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+interface HistoricalDataResponse {
+  symbol: string;
+  data: ChartDataPoint[];
+  indicators?: {
+    sma50?: number[];
+    sma200?: number[];
+    ema?: number[];
+    bollingerUpper?: number[];
+    bollingerLower?: number[];
+  };
+  stats: ChartStats;
+}
+
 export default function Stocks() {
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedStock, setSelectedStock] = useState<SearchResult | null>(null);
   const [selectedRange, setSelectedRange] = useState<TimeRange>("1D");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [chartStats, setChartStats] = useState<ChartStats | undefined>(undefined);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -35,21 +49,83 @@ export default function Stocks() {
 
   const { data: watchlistData = [] } = useQuery<any[]>({
     queryKey: ['/api/watchlist'],
+    refetchInterval: 5000, // Refetch every 5 seconds
   });
 
   const { data: availableStocks = [] } = useQuery<SearchResult[]>({
     queryKey: ['/api/stocks/available'],
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    refetchInterval: 5000, // Refetch every 5 seconds
   });
 
   const watchlistSymbols = new Set(watchlistData.map(item => item.symbol));
 
-  const searchResults = searchQuery.trim() === "" 
-    ? [] 
-    : availableStocks.filter(stock => 
-        stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        stock.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  // Fetch historical data when stock or range changes
+  useEffect(() => {
+    if (!selectedStock) {
+      setChartData([]);
+      setChartStats(undefined);
+      return;
+    }
+
+    console.log('📊 Fetching historical data for:', selectedStock.symbol, 'Range:', selectedRange);
+
+    const fetchHistoricalData = async () => {
+      try {
+        const response = await apiRequest(
+          'GET',
+          `/api/stocks/historical/${selectedStock.symbol}/${selectedRange}`
+        );
+        const data: HistoricalDataResponse = await response.json();
+        
+        console.log('✅ Historical data loaded:', data.data.length, 'points');
+        
+        // Merge indicators into chart data
+        const mergedData = data.data.map((point, i) => ({
+          ...point,
+          sma50: data.indicators?.sma50?.[i],
+          sma200: data.indicators?.sma200?.[i],
+          ema: data.indicators?.ema?.[i],
+          bollingerUpper: data.indicators?.bollingerUpper?.[i],
+          bollingerLower: data.indicators?.bollingerLower?.[i],
+        }));
+        
+        setChartData(mergedData);
+        setChartStats(data.stats);
+      } catch (error) {
+        console.error('❌ Failed to fetch historical data:', error);
+        toast({
+          title: "Error loading chart data",
+          description: "Could not load historical data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchHistoricalData();
+  }, [selectedStock, selectedRange, toast]);
+
+  // Update selected stock price every 5 seconds
+  useEffect(() => {
+    if (!selectedStock) return;
+
+    const updateStockPrice = async () => {
+      try {
+        const response = await apiRequest('GET', '/api/stocks/available');
+        const stocks: SearchResult[] = await response.json();
+        const updatedStock = stocks.find(s => s.symbol === selectedStock.symbol);
+        
+        if (updatedStock) {
+          setSelectedStock(prev => prev ? { ...prev, price: updatedStock.price, changePercent: updatedStock.changePercent } : null);
+        }
+      } catch (error) {
+        console.error('Failed to update stock price:', error);
+      }
+    };
+
+    // Update every 5 seconds
+    const interval = setInterval(updateStockPrice, 5000);
+    return () => clearInterval(interval);
+  }, [selectedStock?.symbol]);
 
   const addToWatchlistMutation = useMutation({
     mutationFn: async (stock: SearchResult) => {
@@ -130,16 +206,6 @@ export default function Stocks() {
     }
   };
 
-  const generateChartData = (): ChartDataPoint[] => {
-    if (!selectedStock) return [];
-    const basePrice = selectedStock.price;
-    const points = selectedRange === "1D" ? 24 : selectedRange === "1W" ? 7 : selectedRange === "1M" ? 30 : selectedRange === "1Y" ? 12 : 60;
-    return Array.from({ length: points }, (_, i) => ({
-      time: selectedRange === "1D" ? `${i}:00` : selectedRange === "1W" ? `Day ${i + 1}` : selectedRange === "1M" ? `Day ${i + 1}` : selectedRange === "1Y" ? `Month ${i + 1}` : `Year ${i + 1}`,
-      value: basePrice + (Math.random() * basePrice * 0.1 - basePrice * 0.05),
-    }));
-  };
-
   const handleAddToWatchlist = (stock: SearchResult, e: React.MouseEvent) => {
     e.stopPropagation();
     if (watchlistSymbols.has(stock.symbol)) {
@@ -166,7 +232,8 @@ export default function Stocks() {
           currentPrice={selectedStock.price}
           change={change}
           changePercent={selectedStock.changePercent}
-          data={generateChartData()}
+          data={chartData}
+          stats={chartStats}
           selectedRange={selectedRange}
           onRangeChange={setSelectedRange}
           onClose={() => setSelectedStock(null)}
@@ -184,16 +251,10 @@ export default function Stocks() {
       />
 
       <main className="container mx-auto max-w-7xl px-4 mt-4">
-        <h1 className="text-2xl font-bold text-foreground mb-4">Search Stocks</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-4">Stocks</h1>
         
-        <StockSearch
-          onSearch={setSearchQuery}
-          results={searchResults}
-          onSelectStock={setSelectedStock}
-        />
-
-        <div className="mt-8">
-          <h2 className="text-lg font-bold text-foreground mb-4">Suggested Stocks</h2>
+        <div className="mt-6">
+          <h2 className="text-lg font-bold text-foreground mb-4">Available Stocks</h2>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {availableStocks.map((stock) => {
               const isPositive = stock.changePercent >= 0;

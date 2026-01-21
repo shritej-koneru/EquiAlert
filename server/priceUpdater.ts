@@ -1,7 +1,7 @@
 import { storage } from "./storage";
 import { getTwilioClient, getTwilioFromPhoneNumber } from "./twilio";
-import { getStockPrice } from "./serpapi";
-import { needsRefresh, getCachedPrice, setCachedPrice } from "./priceCache";
+import { getStockPriceFromGoogle } from "./googleFinance";
+import { needsRefresh, getCachedPrice, setCachedPrice, cleanExpiredCache } from "./priceCache";
 
 interface NotificationState {
   lastNotificationPrice: number;
@@ -55,6 +55,9 @@ class PriceUpdater {
 
   private async updatePrices() {
     try {
+      // Clean expired cache entries before updating
+      cleanExpiredCache();
+      
       const allWatchlistItems = await storage.getAllWatchlistItems();
       
       // Filter items that need price refresh (cache expired or missing)
@@ -92,10 +95,10 @@ class PriceUpdater {
         // Ensure baseline is set in cache before fetching
         setCachedPrice(item.symbol, item.price, 'INR', 'NSE', item.baselinePrice);
         
-        // Fetch real stock price from SerpAPI (will use cache if available)
-        const stockData = await getStockPrice(item.symbol, false); // force fresh fetch
+        // Fetch real stock price from Google Finance scraper
+        const stockData = await getStockPriceFromGoogle(item.symbol, 'NSE');
         
-        if (!stockData) {
+        if (!stockData || stockData.error) {
           console.log(`Could not fetch price for ${item.symbol}, skipping update`);
           continue;
         }

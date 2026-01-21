@@ -9,7 +9,7 @@ import MarketStatus from "@/components/MarketStatus";
 import ChatbotButton from "@/components/ChatbotButton";
 import ChatbotPanel, { ChatMessage } from "@/components/ChatbotPanel";
 import ProfileModal, { UserProfile } from "@/components/ProfileModal";
-import StockChart, { TimeRange, ChartDataPoint } from "@/components/StockChart";
+import StockChart, { TimeRange, ChartDataPoint, ChartStats } from "@/components/StockChart";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,8 @@ export default function Home() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const [selectedRange, setSelectedRange] = useState<TimeRange>("1D");
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [chartStats, setChartStats] = useState<ChartStats | undefined>(undefined);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -29,14 +31,9 @@ export default function Home() {
   ]);
   const { toast } = useToast();
 
-  const [tickerStocks, setTickerStocks] = useState<StockTickerItem[]>([
-    { symbol: "RELIANCE", name: "Reliance Ind", price: 0, change: 0, changePercent: 0 },
-    { symbol: "TCS", name: "Tata Consultancy", price: 0, change: 0, changePercent: 0 },
-    { symbol: "INFY", name: "Infosys", price: 0, change: 0, changePercent: 0 },
-    { symbol: "HDFCBANK", name: "HDFC Bank", price: 0, change: 0, changePercent: 0 },
-    { symbol: "ICICIBANK", name: "ICICI Bank", price: 0, change: 0, changePercent: 0 },
-  ]);
+  const [tickerStocks, setTickerStocks] = useState<StockTickerItem[]>([]);
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+  const [availableStocksPool, setAvailableStocksPool] = useState<any[]>([]);
 
 
   const [currentTime, setCurrentTime] = useState("");
@@ -52,7 +49,7 @@ export default function Home() {
 
   const { data: watchlistData = [], isLoading: watchlistLoading } = useQuery<any[]>({
     queryKey: ['/api/watchlist'],
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: 5000, // Refetch every 5 seconds
     refetchOnWindowFocus: true,
   });
 
@@ -216,18 +213,58 @@ export default function Home() {
     });
   }, [watchlistData, tickerStocks]);
 
-  // Fetch real stock prices from Google Finance API
+  // Fetch available stocks on mount
   useEffect(() => {
+    const fetchAvailableStocks = async () => {
+      try {
+        const res = await apiRequest('GET', '/api/stocks/available');
+        const stocks = await res.json();
+        // Filter out indices and keep only stocks
+        const stocksOnly = stocks.filter((s: any) => s.symbol && !s.symbol.includes('NIFTY') && !s.symbol.includes('SENSEX'));
+        setAvailableStocksPool(stocksOnly);
+      } catch (error) {
+        console.error('Failed to fetch available stocks:', error);
+      }
+    };
+    fetchAvailableStocks();
+  }, []);
+
+  // Randomly select 5 stocks from available pool and rotate every 30 seconds
+  useEffect(() => {
+    if (availableStocksPool.length === 0) return;
+
+    const selectRandomStocks = () => {
+      const shuffled = [...availableStocksPool].sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, 5);
+      
+      setTickerStocks(selected.map(stock => ({
+        symbol: stock.symbol,
+        name: stock.name.split(' ').slice(0, 2).join(' '), // Shorten name
+        price: 0,
+        change: 0,
+        changePercent: 0,
+      })));
+    };
+
+    // Select initial random stocks
+    selectRandomStocks();
+
+    // Rotate stocks every 30 seconds
+    const rotateInterval = setInterval(selectRandomStocks, 30000);
+    return () => clearInterval(rotateInterval);
+  }, [availableStocksPool]);
+
+  // Fetch real stock prices from Google Finance scraper
+  useEffect(() => {
+    if (tickerStocks.length === 0) return;
+
     const fetchStockPrices = async () => {
       try {
         setIsLoadingPrices(true);
-        const stocksToFetch = [
-          { ticker: "RELIANCE", exchange: "NSE" },
-          { ticker: "TCS", exchange: "NSE" },
-          { ticker: "INFY", exchange: "NSE" },
-          { ticker: "HDFCBANK", exchange: "NSE" },
-          { ticker: "ICICIBANK", exchange: "NSE" },
-        ];
+        const stocksToFetch = tickerStocks.map(stock => ({
+          ticker: stock.symbol,
+          exchange: "NSE"
+        }));
 
         const res = await apiRequest('POST', '/api/stocks/google/batch', { stocks: stocksToFetch });
         const data = await res.json();
@@ -236,6 +273,7 @@ export default function Home() {
           const updatedStocks = data.stocks.map((stockData: any, index: number) => {
             const stockInfo = tickerStocks[index];
             if (stockData.error || stockData.price === 0) {
+              console.log(`Failed to fetch ${stockInfo.symbol}:`, stockData.error);
               return stockInfo; // Keep existing data if fetch failed
             }
 
@@ -269,10 +307,10 @@ export default function Home() {
     // Fetch immediately on mount
     fetchStockPrices();
     
-    // Fetch every 5 minutes
-    const interval = setInterval(fetchStockPrices, 5 * 60 * 1000);
+    // Fetch every 5 seconds
+    const interval = setInterval(fetchStockPrices, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [tickerStocks]);
 
   // Monitor watchlist for price alerts
   useEffect(() => {
@@ -364,15 +402,14 @@ export default function Home() {
   };
 
   const handleStockSelect = (stock: SearchResult) => {
+    // Show the stock chart/graph when selected from search
+    setSelectedStock(stock.symbol);
+    
+    // Also add to watchlist if not already there
     const alreadyInWatchlist = watchlistData.some(item => item.symbol === stock.symbol);
-    if (alreadyInWatchlist) {
-      toast({
-        title: "Already in watchlist",
-        description: `${stock.symbol} is already in your watchlist.`,
-      });
-      return;
+    if (!alreadyInWatchlist) {
+      addToWatchlistMutation.mutate(stock);
     }
-    addToWatchlistMutation.mutate(stock);
   };
 
   const handleNotificationClick = async () => {
@@ -418,14 +455,78 @@ export default function Home() {
     }
   };
 
-  const generateChartData = (stock: StockTickerItem): ChartDataPoint[] => {
-    const basePrice = stock.price;
-    const points = selectedRange === "1D" ? 24 : selectedRange === "1W" ? 7 : selectedRange === "1M" ? 30 : selectedRange === "1Y" ? 12 : 60;
-    return Array.from({ length: points }, (_, i) => ({
-      time: selectedRange === "1D" ? `${i}:00` : `Day ${i + 1}`,
-      value: basePrice + Math.random() * 100 - 50,
-    }));
-  };
+  // Fetch historical data when stock or range changes
+  useEffect(() => {
+    if (!selectedStock) {
+      setChartData([]);
+      setChartStats(undefined);
+      return;
+    }
+
+    console.log('📊 [Home] Fetching historical data for:', selectedStock, 'Range:', selectedRange);
+
+    const fetchHistoricalData = async () => {
+      try {
+        const response = await apiRequest(
+          'GET',
+          `/api/stocks/historical/${selectedStock}/${selectedRange}`
+        );
+        const data = await response.json();
+        
+        console.log('✅ [Home] Historical data loaded:', data.data.length, 'points');
+        
+        // Merge indicators into chart data
+        const mergedData = data.data.map((point: any, i: number) => ({
+          ...point,
+          sma50: data.indicators?.sma50?.[i],
+          sma200: data.indicators?.sma200?.[i],
+          ema: data.indicators?.ema?.[i],
+          bollingerUpper: data.indicators?.bollingerUpper?.[i],
+          bollingerLower: data.indicators?.bollingerLower?.[i],
+        }));
+        
+        setChartData(mergedData);
+        setChartStats(data.stats);
+      } catch (error) {
+        console.error('Failed to fetch historical data:', error);
+      }
+    };
+
+    fetchHistoricalData();
+  }, [selectedStock, selectedRange]);
+
+  // Update selected stock price in real-time (every 5 seconds)
+  useEffect(() => {
+    if (!selectedStock) return;
+
+    const updateStockPrice = async () => {
+      try {
+        const stocksToFetch = [{ ticker: selectedStock, exchange: "NSE" }];
+        const res = await apiRequest('POST', '/api/stocks/google/batch', { stocks: stocksToFetch });
+        const data = await res.json();
+        
+        if (data.stocks && data.stocks[0] && !data.stocks[0].error) {
+          const stockData = data.stocks[0];
+          const baseline = baselinePrices.current.get(selectedStock) || stockData.price;
+          const change = stockData.price - baseline;
+          const changePercent = (change / baseline) * 100;
+          
+          // Update ticker stocks if the selected stock is in ticker
+          setTickerStocks(prev => prev.map(stock => 
+            stock.symbol === selectedStock 
+              ? { ...stock, price: stockData.price, change, changePercent }
+              : stock
+          ));
+        }
+      } catch (error) {
+        console.error('Failed to update stock price:', error);
+      }
+    };
+
+    // Update every 5 seconds
+    const interval = setInterval(updateStockPrice, 5000);
+    return () => clearInterval(interval);
+  }, [selectedStock]);
 
   function generateMiniChartData(basePrice: number) {
     return Array.from({ length: 7 }, () => ({
@@ -459,7 +560,8 @@ export default function Home() {
           currentPrice={stock.price}
           change={stock.change}
           changePercent={stock.changePercent}
-          data={generateChartData(stock)}
+          data={chartData}
+          stats={chartStats}
           selectedRange={selectedRange}
           onRangeChange={setSelectedRange}
           onClose={() => setSelectedStock(null)}

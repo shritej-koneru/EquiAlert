@@ -1,9 +1,18 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { setupMemoryMonitoring, logMemoryUsage } from "./memoryManager";
 
 const app = express();
+
+// Enable response compression to reduce bandwidth and memory
+app.use(compression({
+  threshold: 1024, // Only compress responses larger than 1KB
+  level: 6, // Balanced compression level (0-9)
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -38,6 +47,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Setup memory monitoring (check every 15 minutes)
+  setupMemoryMonitoring(15);
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -64,5 +76,6 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen(port, () => {
     log(`serving on port ${port}`);
+    logMemoryUsage('Server Started');
   });
 })();

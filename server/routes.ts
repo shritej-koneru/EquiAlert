@@ -5,10 +5,11 @@ import OpenAI from "openai";
 import { getTwilioClient, getTwilioFromPhoneNumber } from "./twilio";
 import { priceUpdater } from "./priceUpdater";
 import { notificationScheduler } from "./scheduler";
-import { searchStocks, getStockPrice } from "./serpapi";
 import { getUsageStats, resetUsage } from "./rateLimiter";
 import { getAllCachedPrices, getCacheStats } from "./priceCache";
 import { getStockPriceFromGoogle, getMultipleStockPrices } from "./googleFinance";
+import availableStocks from "./availableStocks.json";
+import { generateHistoricalData } from "./historicalData";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const DEMO_USER_ID = "demo-user-1";
@@ -115,11 +116,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Search query required' });
       }
 
-      const results = await searchStocks(q);
+      // Search from available stocks JSON file
+      const results = availableStocks.filter(stock => 
+        stock.symbol.toLowerCase().includes(q.toLowerCase()) ||
+        stock.name.toLowerCase().includes(q.toLowerCase())
+      );
+
       res.json({ results });
     } catch (error) {
       console.error('Stock search error:', error);
       res.status(500).json({ message: 'Failed to search stocks' });
+    }
+  });
+
+  // Endpoint to fetch stock price from Python API (stock folder)
+  app.get("/api/stocks/python/:ticker/:exchange", async (req, res) => {
+    try {
+      const { ticker, exchange } = req.params;
+      
+      if (!ticker || !exchange) {
+        return res.status(400).json({ message: 'Ticker and exchange required' });
+      }
+
+      // Call the Python FastAPI running on port 8000 (or configured port)
+      const pythonApiUrl = process.env.PYTHON_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${pythonApiUrl}/stock/${ticker}/${exchange}`);
+      
+      if (!response.ok) {
+        return res.status(response.status).json({ 
+          message: 'Failed to fetch from Python API',
+          error: await response.text()
+        });
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('Python API call error:', error);
+      // Fallback to TypeScript implementation if Python API is unavailable
+      try {
+        const { ticker, exchange } = req.params;
+        const priceData = await getStockPriceFromGoogle(ticker, exchange);
+        res.json(priceData);
+      } catch (fallbackError) {
+        res.status(500).json({ message: 'Failed to fetch stock price from both APIs' });
+      }
     }
   });
 
@@ -131,14 +172,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Stock symbol required' });
       }
 
-      // Use cache by default (will fetch if not cached)
-      const priceData = await getStockPrice(symbol, true);
+      // Fetch from Google Finance
+      const priceData = await getStockPriceFromGoogle(symbol, 'NSE');
       
-      if (!priceData) {
-        return res.status(404).json({ message: 'Stock not found or price unavailable' });
+      if (!priceData || priceData.error) {
+        return res.status(404).json({ message: priceData?.error || 'Stock not found or price unavailable' });
       }
 
-      res.json(priceData);
+      res.json({
+        price: priceData.price,
+        currency: priceData.currency,
+        symbol: priceData.ticker,
+        exchange: priceData.exchange,
+        change: 0,
+        changePercent: 0,
+      });
     } catch (error) {
       console.error('Stock price fetch error:', error);
       res.status(500).json({ message: 'Failed to fetch stock price' });
@@ -157,9 +205,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const priceData = await getStockPriceFromGoogle(ticker, exchange);
       
       if (priceData.error) {
+        console.log(`Google Finance error for ${ticker}:${exchange}:`, priceData.error);
         return res.status(404).json({ message: priceData.error });
       }
 
+      console.log(`Google Finance price for ${ticker}:${exchange}:`, priceData.price);
       res.json(priceData);
     } catch (error) {
       console.error('Google Finance fetch error:', error);
@@ -184,76 +234,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New endpoint: Get historical OHLC data for chart
+  app.get("/api/stocks/historical/:symbol/:timeRange", async (req, res) => {
+    try {
+      const { symbol, timeRange } = req.params;
+      
+      if (!symbol || !timeRange) {
+        return res.status(400).json({ message: 'Symbol and time range required' });
+      }
+
+      // Validate time range
+      const validRanges = ['1D', '1W', '1M', '1Y', '5Y'];
+      if (!validRanges.includes(timeRange)) {
+        return res.status(400).json({ message: 'Invalid time range. Use 1D, 1W, 1M, 1Y, or 5Y' });
+      }
+
+      // Get current price first
+      const [ticker, exchange] = symbol.includes(':') ? symbol.split(':') : [symbol, 'NSE'];
+      const priceData = await getStockPriceFromGoogle(ticker, exchange);
+      
+      if (priceData.error || !priceData.price) {
+        return res.status(404).json({ message: 'Stock not found or price unavailable' });
+      }
+
+      // Generate historical data
+      const historicalData = generateHistoricalData(
+        symbol,
+        priceData.price,
+        timeRange as any
+      );
+
+      res.json(historicalData);
+    } catch (error) {
+      console.error('Historical data fetch error:', error);
+      res.status(500).json({ message: 'Failed to fetch historical data' });
+    }
+  });
+
   app.get("/api/stocks/available", async (req, res) => {
     try {
       // Popular Indian stocks to display on Stocks page
       const popularStocks = [
-        { symbol: "HDFCBANK", name: "HDFC Bank" },
-        { symbol: "ICICIBANK", name: "ICICI Bank" },
-        { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank" },
-        { symbol: "HINDUNILVR", name: "Hindustan Unilever" },
-        { symbol: "NESTLEIND", name: "Nestlé India" },
-        { symbol: "SUNPHARMA", name: "Sun Pharmaceutical" },
-        { symbol: "BAJAJ-AUTO", name: "Bajaj Auto" },
-        { symbol: "MARUTI", name: "Maruti Suzuki" },
-        { symbol: "TITAN", name: "Titan Company" },
-        { symbol: "ASIANPAINT", name: "Asian Paints" },
+        { symbol: "HDFCBANK", name: "HDFC Bank", exchange: "NSE" },
+        { symbol: "ICICIBANK", name: "ICICI Bank", exchange: "NSE" },
+        { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank", exchange: "NSE" },
+        { symbol: "HINDUNILVR", name: "Hindustan Unilever", exchange: "NSE" },
+        { symbol: "RELIANCE", name: "Reliance Industries", exchange: "NSE" },
+        { symbol: "TCS", name: "Tata Consultancy Services", exchange: "NSE" },
+        { symbol: "INFY", name: "Infosys", exchange: "NSE" },
+        { symbol: "BAJAJFINSV", name: "Bajaj Finserv", exchange: "NSE" },
+        { symbol: "MARUTI", name: "Maruti Suzuki", exchange: "NSE" },
+        { symbol: "TITAN", name: "Titan Company", exchange: "NSE" },
       ];
 
-      // Get cached prices or fetch for any that aren't cached
-      const stocksWithPrices = await Promise.all(
-        popularStocks.map(async (stock) => {
-          const priceData = await getStockPrice(stock.symbol, true);
-          if (priceData) {
-            return {
-              symbol: stock.symbol,
-              name: stock.name,
-              price: priceData.price,
-              currency: priceData.currency,
-              change: priceData.change || 0,
-              changePercent: priceData.changePercent || 0,
-            };
-          }
-          return null;
-        })
+      // Fetch prices using Google Finance scraper (from stock folder logic)
+      const stocksWithPrices = await getMultipleStockPrices(
+        popularStocks.map(stock => ({ ticker: stock.symbol, exchange: stock.exchange }))
       );
 
-      // Filter out any nulls
-      const validStocks = stocksWithPrices.filter(s => s !== null);
+      // Map and filter results
+      const validStocks = stocksWithPrices
+        .map((priceData, index) => {
+          if (priceData.error || priceData.price === 0) {
+            console.log(`Failed to fetch ${popularStocks[index].symbol}: ${priceData.error}`);
+            return null;
+          }
+          return {
+            symbol: priceData.ticker,
+            name: popularStocks[index].name,
+            price: priceData.price,
+            currency: priceData.currency,
+            change: 0,
+            changePercent: 0,
+          };
+        })
+        .filter(s => s !== null);
       
       res.json(validStocks);
     } catch (error) {
       console.error('Available stocks fetch error:', error);
       res.status(500).json({ message: 'Failed to fetch available stocks' });
-    }
-  });
-
-  app.get("/api/serpapi/usage", async (req, res) => {
-    try {
-      const usageStats = getUsageStats();
-      const cacheStats = getCacheStats();
-      res.json({
-        rateLimit: usageStats,
-        cache: cacheStats,
-      });
-    } catch (error) {
-      console.error('Usage stats error:', error);
-      res.status(500).json({ message: 'Failed to get usage stats' });
-    }
-  });
-
-  app.post("/api/serpapi/reset", async (req, res) => {
-    try {
-      resetUsage();
-      const stats = getUsageStats();
-      res.json({ 
-        success: true, 
-        message: 'Usage counter reset successfully',
-        stats 
-      });
-    } catch (error) {
-      console.error('Usage reset error:', error);
-      res.status(500).json({ message: 'Failed to reset usage' });
     }
   });
 
