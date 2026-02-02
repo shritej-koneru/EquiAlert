@@ -45,30 +45,30 @@ export function generateHistoricalData(
   let interval: string;
   let volatility: number;
 
-  // Configure based on time range - optimized for lower memory usage
+  // Configure based on time range - ultra-optimized for minimal memory
   switch (timeRange) {
     case '1D':
-      points = 50; // Reduced from 78 for memory
+      points = 30; // Minimal data points
       interval = '5m';
       volatility = 0.005; // 0.5% volatility
       break;
     case '1W':
-      points = 25; // Reduced from 35 for memory
+      points = 20; // Minimal data points
       interval = '1h';
       volatility = 0.01; // 1% volatility
       break;
     case '1M':
-      points = 20; // Reduced from 22 for memory
+      points = 15; // Minimal data points
       interval = '1d';
       volatility = 0.015; // 1.5% volatility
       break;
     case '1Y':
-      points = 40; // Reduced from 52 for memory
+      points = 25; // Minimal data points
       interval = '1w';
       volatility = 0.025; // 2.5% volatility
       break;
     case '5Y':
-      points = 50; // Reduced from 60 for memory
+      points = 30; // Minimal data points
       interval = '1M';
       volatility = 0.04; // 4% volatility
       break;

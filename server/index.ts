@@ -11,8 +11,8 @@ const app = express();
 app.use((req: Request, res: Response, next: NextFunction) => {
   const stats = getMemoryStats();
   
-  // If memory is critically high (>480MB RSS), reject new requests temporarily
-  if (stats.rssMB > 480) {
+  // If memory is critically high (>420MB RSS), reject new requests temporarily
+  if (stats.rssMB > 420) {
     console.warn(`⚠️  Memory critical (${stats.rssMB}MB), throttling request: ${req.method} ${req.path}`);
     return res.status(503).json({ 
       message: 'Service temporarily unavailable due to high memory usage. Please try again in a moment.' 
@@ -62,9 +62,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Setup memory monitoring (check every 5 minutes for production)
+  // Setup memory monitoring (check every 2 minutes for production, 15 for dev)
   const isProduction = app.get('env') === 'production';
-  setupMemoryMonitoring(isProduction ? 5 : 15);
+  setupMemoryMonitoring(isProduction ? 2 : 15);
   
   const server = await registerRoutes(app);
 

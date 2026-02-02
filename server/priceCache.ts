@@ -18,11 +18,11 @@ interface CachedPrice {
   expiresAt: number; // When this cache expires
 }
 
-// Cache TTL: 30 minutes (prices stay fresh for 30 min)
-const CACHE_TTL_MS = 30 * 60 * 1000;
+// Cache TTL: 20 minutes (reduced for memory efficiency)
+const CACHE_TTL_MS = 20 * 60 * 1000;
 
 // Maximum cache entries (prevent unbounded growth)
-const MAX_CACHE_SIZE = 50;
+const MAX_CACHE_SIZE = 25;
 
 // In-memory price cache
 const priceCache = new Map<string, CachedPrice>();

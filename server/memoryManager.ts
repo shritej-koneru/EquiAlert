@@ -66,9 +66,9 @@ export function setupMemoryMonitoring(intervalMinutes: number = 15): NodeJS.Time
     // Log current usage
     logMemoryUsage('Monitor');
     
-    // Force GC if heap usage is above 60% (more aggressive for production)
-    if (stats.heapPercentage > 60) {
-      console.log('⚠️  High memory usage detected, attempting cleanup...');
+    // Force GC if heap usage is above 50% (ultra-aggressive for production)
+    if (stats.heapPercentage > 50) {
+      console.log('⚠️  Memory usage detected, running cleanup...');
       if (forceGC()) {
         setTimeout(() => {
           logMemoryUsage('After GC');
@@ -76,13 +76,13 @@ export function setupMemoryMonitoring(intervalMinutes: number = 15): NodeJS.Time
       }
     }
     
-    // Warn if RSS exceeds 400MB (leaving more headroom for 512MB limit)
-    if (stats.rssMB > 400) {
-      console.warn(`⚠️  WARNING: High RSS memory usage: ${stats.rssMB}MB (limit: 512MB)`);
+    // Warn if RSS exceeds 350MB (critical threshold for 512MB limit)
+    if (stats.rssMB > 350) {
+      console.warn(`⚠️  CRITICAL: High RSS memory usage: ${stats.rssMB}MB (limit: 512MB)`);
       // Force aggressive cleanup
       if (forceGC()) {
         setTimeout(() => {
-          logMemoryUsage('Post-Warning GC');
+          logMemoryUsage('Post-Critical GC');
         }, 100);
       }
     }
