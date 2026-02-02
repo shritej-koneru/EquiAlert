@@ -240,10 +240,11 @@ export default function Home() {
       setTickerStocks(selected.map(stock => ({
         symbol: stock.symbol,
         name: stock.name.split(' ').slice(0, 2).join(' '), // Shorten name
-        price: 0,
-        change: 0,
-        changePercent: 0,
+        price: stock.price || 0, // Use real price from available stocks
+        change: stock.price ? (stock.price * stock.changePercent) / 100 : 0,
+        changePercent: stock.changePercent || 0,
       })));
+      setIsLoadingPrices(false);
     };
 
     // Select initial random stocks
@@ -254,7 +255,9 @@ export default function Home() {
     return () => clearInterval(rotateInterval);
   }, [availableStocksPool]);
 
-  // Fetch real stock prices from Google Finance scraper
+  // Note: Real stock prices are already loaded from /api/stocks/available
+  // No need to fetch again from Google Finance batch API (causes timeouts)
+  /*
   useEffect(() => {
     if (tickerStocks.length === 0) return;
 
@@ -311,6 +314,7 @@ export default function Home() {
     const interval = setInterval(fetchStockPrices, 5000);
     return () => clearInterval(interval);
   }, [tickerStocks]);
+  */
 
   // Monitor watchlist for price alerts
   useEffect(() => {
