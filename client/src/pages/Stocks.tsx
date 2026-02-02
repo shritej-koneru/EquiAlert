@@ -51,7 +51,8 @@ export default function Stocks() {
 
   const { data: watchlistData = [] } = useQuery<any[]>({
     queryKey: ['/api/watchlist'],
-    refetchInterval: 5000, // Refetch every 5 seconds
+    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 20000, // Consider data fresh for 20 seconds
   });
 
   const { data: availableStocks = [], isLoading: stocksLoading } = useQuery<SearchResult[]>({

@@ -162,6 +162,9 @@ export default function StockChart({
   const chartColor = isPositive ? "#00FF7F" : "#FF4C4C";
   const timeRanges: TimeRange[] = ["1D", "1W", "1M", "1Y", "5Y"];
 
+  // Show loading state if no data
+  const isLoading = !data || data.length === 0;
+
   // Add color property to each data point based on price movement
   const coloredData = data.map((point, index) => {
     if (index === 0) {
@@ -344,6 +347,15 @@ export default function StockChart({
       </div>
 
       <div className="p-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading chart data...</p>
+            </div>
+          </div>
+        ) : (
+          <>
         {/* Main Price Chart */}
         <ResponsiveContainer width="100%" height={400}>
           <ComposedChart data={coloredData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -516,6 +528,8 @@ export default function StockChart({
               </Bar>
             </ComposedChart>
           </ResponsiveContainer>
+        )}
+          </>
         )}
       </div>
     </Card>

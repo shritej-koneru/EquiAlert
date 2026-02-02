@@ -116,8 +116,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Search query required' });
       }
 
-      // Search from available stocks JSON file
-      const results = availableStocks.filter(stock => 
+      // Use the same stock list with prices from /api/stocks/available
+      const popularStocks = [
+        { symbol: "HDFCBANK", name: "HDFC Bank", price: 925.15, changePercent: 0.33 },
+        { symbol: "ICICIBANK", name: "ICICI Bank", price: 1342.50, changePercent: 0.62 },
+        { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank", price: 409.20, changePercent: 0.48 },
+        { symbol: "HINDUNILVR", name: "Hindustan Unilever", price: 2328.20, changePercent: -0.96 },
+        { symbol: "RELIANCE", name: "Reliance Industries", price: 1373.00, changePercent: 1.93 },
+        { symbol: "TCS", name: "Tata Consultancy Services", price: 3157.90, changePercent: -0.91 },
+        { symbol: "INFY", name: "Infosys", price: 1633.10, changePercent: -1.29 },
+        { symbol: "BAJAJFINSV", name: "Bajaj Finserv", price: 901.65, changePercent: -0.08 },
+        { symbol: "MARUTI", name: "Maruti Suzuki", price: 14250.00, changePercent: 0.36 },
+        { symbol: "TITAN", name: "Titan Company", price: 3234.50, changePercent: 1.45 },
+      ];
+
+      // Filter stocks based on search query
+      const results = popularStocks.filter(stock => 
         stock.symbol.toLowerCase().includes(q.toLowerCase()) ||
         stock.name.toLowerCase().includes(q.toLowerCase())
       );

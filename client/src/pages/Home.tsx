@@ -49,8 +49,9 @@ export default function Home() {
 
   const { data: watchlistData = [], isLoading: watchlistLoading } = useQuery<any[]>({
     queryKey: ['/api/watchlist'],
-    refetchInterval: 5000, // Refetch every 5 seconds
-    refetchOnWindowFocus: true,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnWindowFocus: false,
+    staleTime: 20000, // Consider data fresh for 20 seconds
   });
 
   const watchlistStocks: WatchlistStock[] = watchlistData.map(item => {
