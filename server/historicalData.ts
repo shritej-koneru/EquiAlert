@@ -48,27 +48,27 @@ export function generateHistoricalData(
   // Configure based on time range - optimized for lower memory usage
   switch (timeRange) {
     case '1D':
-      points = 78; // 5-minute intervals for market hours
+      points = 50; // Reduced from 78 for memory
       interval = '5m';
       volatility = 0.005; // 0.5% volatility
       break;
     case '1W':
-      points = 35; // 7 hours per day * 5 days
+      points = 25; // Reduced from 35 for memory
       interval = '1h';
       volatility = 0.01; // 1% volatility
       break;
     case '1M':
-      points = 22; // ~22 trading days
+      points = 20; // Reduced from 22 for memory
       interval = '1d';
       volatility = 0.015; // 1.5% volatility
       break;
     case '1Y':
-      points = 52; // 52 weeks
+      points = 40; // Reduced from 52 for memory
       interval = '1w';
       volatility = 0.025; // 2.5% volatility
       break;
     case '5Y':
-      points = 60; // 60 months
+      points = 50; // Reduced from 60 for memory
       interval = '1M';
       volatility = 0.04; // 4% volatility
       break;

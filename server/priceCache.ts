@@ -22,7 +22,7 @@ interface CachedPrice {
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
 // Maximum cache entries (prevent unbounded growth)
-const MAX_CACHE_SIZE = 100;
+const MAX_CACHE_SIZE = 50;
 
 // In-memory price cache
 const priceCache = new Map<string, CachedPrice>();

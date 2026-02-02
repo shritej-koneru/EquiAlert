@@ -3,9 +3,24 @@ import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { setupMemoryMonitoring, logMemoryUsage } from "./memoryManager";
+import { setupMemoryMonitoring, logMemoryUsage, getMemoryStats } from "./memoryManager";
 
 const app = express();
+
+// Memory-aware throttling middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const stats = getMemoryStats();
+  
+  // If memory is critically high (>480MB RSS), reject new requests temporarily
+  if (stats.rssMB > 480) {
+    console.warn(`⚠️  Memory critical (${stats.rssMB}MB), throttling request: ${req.method} ${req.path}`);
+    return res.status(503).json({ 
+      message: 'Service temporarily unavailable due to high memory usage. Please try again in a moment.' 
+    });
+  }
+  
+  next();
+});
 
 // Enable response compression to reduce bandwidth and memory
 app.use(compression({
@@ -13,8 +28,8 @@ app.use(compression({
   level: 6, // Balanced compression level (0-9)
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '100kb' })); // Limit request body size
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -47,8 +62,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Setup memory monitoring (check every 15 minutes)
-  setupMemoryMonitoring(15);
+  // Setup memory monitoring (check every 5 minutes for production)
+  const isProduction = app.get('env') === 'production';
+  setupMemoryMonitoring(isProduction ? 5 : 15);
   
   const server = await registerRoutes(app);
 
