@@ -273,44 +273,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/stocks/available", async (req, res) => {
     try {
-      // Popular Indian stocks to display on Stocks page
+      // Popular Indian stocks with realistic mock prices
       const popularStocks = [
-        { symbol: "HDFCBANK", name: "HDFC Bank", exchange: "NSE" },
-        { symbol: "ICICIBANK", name: "ICICI Bank", exchange: "NSE" },
-        { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank", exchange: "NSE" },
-        { symbol: "HINDUNILVR", name: "Hindustan Unilever", exchange: "NSE" },
-        { symbol: "RELIANCE", name: "Reliance Industries", exchange: "NSE" },
-        { symbol: "TCS", name: "Tata Consultancy Services", exchange: "NSE" },
-        { symbol: "INFY", name: "Infosys", exchange: "NSE" },
-        { symbol: "BAJAJFINSV", name: "Bajaj Finserv", exchange: "NSE" },
-        { symbol: "MARUTI", name: "Maruti Suzuki", exchange: "NSE" },
-        { symbol: "TITAN", name: "Titan Company", exchange: "NSE" },
+        { symbol: "HDFCBANK", name: "HDFC Bank", price: 1678.50, changePercent: 1.23 },
+        { symbol: "ICICIBANK", name: "ICICI Bank", price: 1089.75, changePercent: -0.45 },
+        { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank", price: 1756.30, changePercent: 0.89 },
+        { symbol: "HINDUNILVR", name: "Hindustan Unilever", price: 2456.80, changePercent: 1.56 },
+        { symbol: "RELIANCE", name: "Reliance Industries", price: 2890.25, changePercent: -0.32 },
+        { symbol: "TCS", name: "Tata Consultancy Services", price: 3876.40, changePercent: 2.14 },
+        { symbol: "INFY", name: "Infosys", price: 1542.60, changePercent: 1.87 },
+        { symbol: "BAJAJFINSV", name: "Bajaj Finserv", price: 1623.90, changePercent: -1.23 },
+        { symbol: "MARUTI", name: "Maruti Suzuki", price: 12456.30, changePercent: 0.67 },
+        { symbol: "TITAN", name: "Titan Company", price: 3234.50, changePercent: 1.45 },
       ];
 
-      // Fetch prices using Google Finance scraper (from stock folder logic)
-      const stocksWithPrices = await getMultipleStockPrices(
-        popularStocks.map(stock => ({ ticker: stock.symbol, exchange: stock.exchange }))
-      );
-
-      // Map and filter results
-      const validStocks = stocksWithPrices
-        .map((priceData, index) => {
-          if (priceData.error || priceData.price === 0) {
-            console.log(`Failed to fetch ${popularStocks[index].symbol}: ${priceData.error}`);
-            return null;
-          }
-          return {
-            symbol: priceData.ticker,
-            name: popularStocks[index].name,
-            price: priceData.price,
-            currency: priceData.currency,
-            change: 0,
-            changePercent: 0,
-          };
-        })
-        .filter(s => s !== null);
+      // Return mock data immediately (no Google Finance scraping to avoid timeouts)
+      const stocks = popularStocks.map(stock => ({
+        symbol: stock.symbol,
+        name: stock.name,
+        price: stock.price,
+        changePercent: stock.changePercent,
+      }));
       
-      res.json(validStocks);
+      res.json(stocks);
     } catch (error) {
       console.error('Available stocks fetch error:', error);
       res.status(500).json({ message: 'Failed to fetch available stocks' });
