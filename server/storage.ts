@@ -36,7 +36,7 @@ export class MemStorage implements IStorage {
     this.profiles = new Map();
     this.watchlist = new Map();
     this.initializeDefaultStocks();
-    this.startWatchlistRotation();
+    // Removed auto-rotation - stocks only change on manual page reload
   }
 
   private initializeDefaultStocks() {
@@ -44,10 +44,10 @@ export class MemStorage implements IStorage {
   }
 
   private startWatchlistRotation() {
-    // Rotate watchlist stocks every 30 seconds
-    this.rotationInterval = setInterval(() => {
-      this.refreshWatchlist("demo-user-1");
-    }, 30000);
+    // Disabled: stocks will only rotate on manual page reload
+    // this.rotationInterval = setInterval(() => {
+    //   this.refreshWatchlist("demo-user-1");
+    // }, 30000);
   }
 
   refreshWatchlist(userId: string): void {

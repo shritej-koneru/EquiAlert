@@ -595,7 +595,7 @@ export default function Home() {
 
         <div className="mt-8 px-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-foreground">My Watchlist</h2>
+            <h2 className="text-lg font-bold text-foreground">My Home</h2>
           </div>
 
           {watchlistLoading ? (
