@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import TopBar from "@/components/TopBar";
 import BottomNav from "@/components/BottomNav";
-import { SearchResult } from "@/components/StockSearch";
+import StockSearch, { SearchResult } from "@/components/StockSearch";
 import StockChart, { TimeRange, ChartDataPoint, ChartStats } from "@/components/StockChart";
 import ProfileModal, { UserProfile } from "@/components/ProfileModal";
 import ChatbotButton from "@/components/ChatbotButton";
@@ -33,6 +33,8 @@ export default function Stocks() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [chartStats, setChartStats] = useState<ChartStats | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -52,10 +54,29 @@ export default function Stocks() {
     refetchInterval: 5000, // Refetch every 5 seconds
   });
 
-  const { data: availableStocks = [] } = useQuery<SearchResult[]>({
+  const { data: availableStocks = [], isLoading: stocksLoading } = useQuery<SearchResult[]>({
     queryKey: ['/api/stocks/available'],
-    refetchInterval: 5000, // Refetch every 5 seconds
+    refetchInterval: 30000, // Refetch every 30 seconds (reduced from 5)
+    staleTime: 20000, // Consider fresh for 20 seconds
   });
+
+  // Handle search
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      const response = await apiRequest('GET', `/api/stocks/search?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      setSearchResults(data.results || []);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    }
+  };
 
   const watchlistSymbols = new Set(watchlistData.map(item => item.symbol));
 
@@ -253,10 +274,23 @@ export default function Stocks() {
       <main className="container mx-auto max-w-7xl px-4 mt-4">
         <h1 className="text-2xl font-bold text-foreground mb-4">Stocks</h1>
         
+        <StockSearch
+          onSearch={handleSearch}
+          results={searchResults}
+          onSelectStock={setSelectedStock}
+        />
+        
         <div className="mt-6">
-          <h2 className="text-lg font-bold text-foreground mb-4">Available Stocks</h2>
+          <h2 className="text-lg font-bold text-foreground mb-4">
+            {stocksLoading ? "Loading stocks..." : "Available Stocks"}
+          </h2>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {availableStocks.map((stock) => {
+            {availableStocks.length === 0 && !stocksLoading ? (
+              <p className="text-muted-foreground col-span-full text-center py-8">
+                No stocks available at the moment. Please try again later.
+              </p>
+            ) : (
+              availableStocks.map((stock) => {
               const isPositive = stock.changePercent >= 0;
               const inWatchlist = watchlistSymbols.has(stock.symbol);
               
@@ -293,7 +327,8 @@ export default function Stocks() {
                   </div>
                 </Card>
               );
-            })}
+            })
+            )}
           </div>
         </div>
       </main>
